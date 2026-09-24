@@ -59,8 +59,9 @@ test("sign up → confirm email → today → sign out → sign in", async ({ pa
   await expect(page).toHaveURL(/\/check-email\?reason=signup$/);
 
   await page.goto(await latestEmailLink(email));
-  await expect(page).toHaveURL(/\/today$/);
-  await expect(page.getByRole("heading", { level: 1 })).toContainText(name);
+  // New accounts start onboarding, pre-filled with the sign-up name.
+  await expect(page).toHaveURL(/\/onboarding$/);
+  await expect(page.getByLabel("Your name")).toHaveValue(name);
 
   // The browser's timezone (set by client JS, so this also proves hydration under the CSP) was captured.
   const { data: profile } = await adminClient().from("profiles").select("timezone").eq("display_name", name).single();
@@ -80,11 +81,12 @@ test("sign up → confirm email → today → sign out → sign in", async ({ pa
 
   await page.getByLabel("Password").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
-  await expect(page).toHaveURL(/\/today$/);
+  // `/today` sends users who haven't finished onboarding back to it.
+  await expect(page).toHaveURL(/\/onboarding$/);
 
   // Signed-in users skip the guest pages.
   await page.goto("/login");
-  await expect(page).toHaveURL(/\/today$/);
+  await expect(page).toHaveURL(/\/(today|onboarding)$/);
 });
 
 test("password reset via email signs the user in with the new password", async ({ page }) => {
@@ -101,7 +103,7 @@ test("password reset via email signs the user in with the new password", async (
   await page.getByLabel("New password", { exact: true }).fill("brand-new-password-9");
   await page.getByLabel("Confirm new password").fill("brand-new-password-9");
   await page.getByRole("button", { name: "Save password" }).click();
-  await expect(page).toHaveURL(/\/today$/);
+  await expect(page).toHaveURL(/\/onboarding$/);
 });
 
 test("a used or bogus email link shows a friendly error", async ({ page }) => {
@@ -124,5 +126,5 @@ test("magic link signs in an existing user and doesn't reveal unknown emails", a
   await expect(page).toHaveURL(/\/check-email\?reason=magic-link$/);
 
   await page.goto(await latestEmailLink(email));
-  await expect(page).toHaveURL(/\/today$/);
+  await expect(page).toHaveURL(/\/onboarding$/);
 });

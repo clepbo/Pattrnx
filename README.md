@@ -9,8 +9,9 @@ change them.
 
 ## Status
 
-**Milestone 1 (Foundation) complete:** app scaffold, database foundation with
-row-level security, email auth, and CI. See `FLOAT.md` for what's next.
+**Milestone 2 (Plan and execute) in review.** Onboarding, goals with a
+feasibility check, milestones and actions, routines with a minimum version, the
+Today plan, activity logging and daily check-ins. See `FLOAT.md` for what's next.
 
 ## Local development
 

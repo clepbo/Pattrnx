@@ -119,6 +119,35 @@ export function eachDay(from: LocalDate, to: LocalDate): LocalDate[] {
   return days;
 }
 
+function daysInMonth(year: number, month: number): number {
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
+/** Calendar month arithmetic; the day clamps to the target month's length (Jan 31 + 1 → Feb 28/29). */
+export function addMonths(date: LocalDate, months: number): LocalDate {
+  const [y, m, d] = date.split("-").map(Number);
+  const index = y * 12 + (m - 1) + months;
+  const year = Math.floor(index / 12);
+  const month = (index % 12) + 1;
+  const day = Math.min(d, daysInMonth(year, month));
+  return `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}` as LocalDate;
+}
+
+/**
+ * Calendar months from `from` to `to`, with the partial month as a fraction of that month's length.
+ * 2026-09-01 → 2027-03-01 is exactly 6. Negative when `to` is earlier.
+ */
+export function monthsBetween(from: LocalDate, to: LocalDate): number {
+  if (to < from) return -monthsBetween(to, from);
+  const [fy, fm] = from.split("-").map(Number);
+  const [ty, tm] = to.split("-").map(Number);
+  let whole = (ty - fy) * 12 + (tm - fm);
+  if (addMonths(from, whole) > to) whole -= 1;
+  const anchor = addMonths(from, whole);
+  const next = addMonths(from, whole + 1);
+  return whole + diffDays(anchor, to) / diffDays(anchor, next);
+}
+
 export function compareLocalDates(a: LocalDate, b: LocalDate): number {
   return a < b ? -1 : a > b ? 1 : 0;
 }

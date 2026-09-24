@@ -1,12 +1,14 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
+import { DesktopNav, MobileNav } from "@/components/layout/app-nav";
 import { SignOutButton } from "@/features/auth/components/sign-out-button";
 import { requireUser } from "@/server/auth";
-
-const NAV = [{ href: "/today", label: "Today" }] as const;
+import { getProfile } from "@/server/services/profile";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
-  await requireUser();
+  const profile = await getProfile(await requireUser());
+  if (!profile.onboarding_completed_at) redirect("/onboarding");
 
   return (
     <div className="flex flex-1 flex-col">
@@ -16,22 +18,13 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
             <Link href="/today" className="text-sm font-semibold tracking-wide">
               Pattrnx
             </Link>
-            <nav aria-label="Main">
-              <ul className="flex gap-1">
-                {NAV.map((item) => (
-                  <li key={item.href}>
-                    <Link href={item.href} className="hover:bg-muted inline-flex h-11 items-center rounded-lg px-3 text-sm">
-                      {item.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </nav>
+            <DesktopNav />
           </div>
           <SignOutButton />
         </div>
       </header>
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">{children}</main>
+      <main className="mx-auto w-full max-w-3xl flex-1 px-4 pt-8 pb-24 sm:pb-8">{children}</main>
+      <MobileNav />
     </div>
   );
 }
