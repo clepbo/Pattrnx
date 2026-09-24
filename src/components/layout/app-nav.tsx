@@ -10,6 +10,7 @@ export const APP_NAV = [
   { href: "/goals", label: "Goals" },
   { href: "/routines", label: "Routines" },
   { href: "/log", label: "Log" },
+  { href: "/patterns", label: "Patterns" },
   { href: "/settings", label: "Settings" },
 ] as const;
 
@@ -45,14 +46,14 @@ export function MobileNav() {
   const isActive = useIsActive();
   return (
     <nav aria-label="Main" className="bg-background border-border fixed inset-x-0 bottom-0 z-10 border-t pb-[env(safe-area-inset-bottom)] sm:hidden">
-      <ul className="grid grid-cols-5">
+      <ul className="grid grid-cols-6">
         {APP_NAV.map((item) => (
           <li key={item.href}>
             <Link
               href={item.href}
               aria-current={isActive(item.href) ? "page" : undefined}
               className={cn(
-                "text-muted-foreground flex h-14 items-center justify-center text-xs",
+                "text-muted-foreground flex h-14 items-center justify-center text-[11px]",
                 "aria-[current=page]:text-foreground aria-[current=page]:font-semibold",
               )}
             >

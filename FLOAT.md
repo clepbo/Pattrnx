@@ -7,50 +7,47 @@ history.
 
 ## Current phase
 
-**Milestone 2 (Plan and execute): complete, in review.** Milestone 1 merged in PR #1.
+**Milestone 3 (Understand): complete, in review.** M1 and M2 merged (PRs #1, #6).
 
-Built in M2:
-- Migration `20260925090000_plan_and_execute.sql`: goals, goal_strategies,
-  milestones, actions, routines, routine_steps, tasks, outcomes;
-  `activities.goal_id`/`task_id`; `set_task_status()` SQL function. pgTAP (32 more).
-- Engines: feasibility (BR-5, blueprint ₦2M example), progress helpers, routine
-  occurrences (30-day backfill, 7-day lookahead).
-- Onboarding (J1): profile → life areas + starter activity types → first goal.
-  The `(app)` layout sends un-onboarded users to `/onboarding`.
-- Goals: create/edit, feasibility card with arithmetic and adjustments, progress
-  readings, strategy, milestones, actions scheduled onto a day, status changes.
-- Routines: CRUD with minimum version, pause/resume/archive, 4-week adherence count.
-- Today: grouped tasks with Done / minimum / Skip / Undo, missed tasks from the
-  last 6 days, manual tasks, one-tap quick log, daily check-in.
-- Log: activity form (idempotent submits), 14-day history, activity type management.
-- Settings: profile and life areas.
-- Tests: 125 unit, 67 pgTAP, 5 integration, 14 e2e (full J1/J2 journey with axe).
+Built in M3:
+- Goal health engine (BR-6) with reasons, and the 4-week plan-vs-reality strip on
+  the goal page. Health badges on the goals list and Today ("Active goals").
+- Pattern engine: 7 detectors plus the plan → abandon → re-plan loop (ARCHITECTURE
+  §8.3), confidence with split-half consistency plus significance tests
+  (Bonferroni over each detector's family, §8.4), templates + `wordingGuard` (BR-1).
+- Behaviour fixtures (8 planted personas, noise, new user). Calibration test
+  `pnpm test:robustness`: 2.3% of noise users see any pattern, and planted patterns
+  are found in 28–30 of 30 seeds.
+- `patterns` table + lifecycle (candidate → presented → acknowledged/dismissed →
+  resolved), feedback and "don't show again" (BR-9), detection claim and dirty flag.
+- Patterns page with per-detector evidence tables, "Pattern to watch" on Today, and
+  a "still learning" state before 21 days of history.
+- Tests: 176 unit (+8 calibration), 78 pgTAP, 5 integration, 17 e2e.
 
-## Next up: Milestone 3 (understand)
+## Next up: Milestone 4 (intervene and learn)
 
-1. Progress & health engine (BR-6: stalled, needs recalibration, at risk…) and
-   the plan-vs-reality strip on goals (F9).
-2. Pattern detectors from ARCHITECTURE §8.3 with behaviour fixtures in
-   `tests/fixtures/behavior/` (incl. the random-noise user), confidence scoring
-   (§8.4), language templates + `wordingGuard` (§8.8).
-3. `patterns` table + lifecycle + feedback/suppression (F12), Patterns page, and
-   one "pattern to watch" on Today.
-4. Loop detection (F11): plan → abandon → re-plan, routine breaking point.
-
-Then Milestone 4: weekly review, experiments, export/delete, security review, beta.
+1. Interventions catalog (§8.5) → suggested experiment per visible pattern.
+2. Experiments: table, engine (§8.7, BR-7, BR-8), start/abandon/evaluate/confirm UI,
+   active experiments on Today and goals.
+3. Weekly review (F13): snapshot generation, reflection, usefulness score, pattern
+   feedback inline, suggested intervention.
+4. Data export and account deletion (F15), Sentry with scrubbing, security review
+   using the `Security-review.md` skill, and a beta-readiness pass.
 
 ## Recent decisions
 
-- Routine tasks backfill up to 30 days so unopened days still count as planned.
-  Resuming a routine resets `active_from` to today (paused days are never missed).
-- FR-4 narrowed: only tasks with an activity type create an activity on completion.
-- Forms with client state remount on each action result (`stateKey`) because
-  React 19 resets forms after actions, which desyncs controlled inputs.
-- Money-denominated activity types open the full log form instead of one-tap.
+- Detection needs a significance test on top of n/effect thresholds (noise
+  fixtures showed about 6% false positives without it). Two-proportion tests are
+  continuity-corrected; share tests use the exact binomial tail.
+- Breaking point is a per-streak-position miss-rate test, not "runs cluster around
+  the mode" (which fires on memoryless noise).
+- A compare-and-set claim replaces the advisory lock (PostgREST = one transaction per call).
+- Dirty-flag triggers are `security definer` so Supabase Auth account deletion works.
+- Plain inserts don't re-trigger detection. New data is picked up by the daily run.
 
 ## Open questions blocking work
 
-None block Milestone 3. Q1 (hosting region) must be answered before the
+None block Milestone 4. Q1 (hosting region) must be answered before the
 production Supabase project is created. See `PRD.md` §17.
 
 ## Production setup checklist (when the hosted project is created)

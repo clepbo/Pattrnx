@@ -63,7 +63,9 @@ Server Components for reads. Server Actions for mutations, returning
 No job system. Routine tasks are materialized idempotently (today−30…+7) on page
 load; resuming a routine restarts it today so paused days are never missed. Pattern detection runs lazily when > 24 h old or stale (90-day window,
 < 2 s). The weekly review is generated on first visit after the week ends
-(unique per week). An advisory lock stops double runs.
+(unique per week). `claim_pattern_detection()` (a compare-and-set on the profile) stops
+double detection runs. Detectors are significance-tested and Bonferroni-corrected
+(calibration: `pnpm test:robustness`).
 
 ## Critical business rules
 
