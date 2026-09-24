@@ -2,10 +2,16 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 
-export default function LandingPage() {
+export default async function LandingPage({ searchParams }: PageProps<"/">) {
+  const { deleted } = await searchParams;
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-10 px-4 py-16">
       <p className="text-sm font-semibold tracking-wide">Pattrnx</p>
+      {deleted && (
+        <p role="status" className="bg-muted rounded-lg px-3 py-2 text-sm">
+          Your account and all of its data have been deleted.
+        </p>
+      )}
       <div className="grid gap-4">
         <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
           Close the gap between what you intend to do and what you consistently do.

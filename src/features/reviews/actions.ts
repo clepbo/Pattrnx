@@ -26,8 +26,9 @@ export async function saveReflectionAction(_prev: FormState, formData: FormData)
   const raw = formFields(formData, ["periodStart", "reflection", "usefulness"]);
   const parsed = reflectionSchema.safeParse(raw);
   if (!parsed.success) return echoValues(validationFailure(parsed.error.flatten().fieldErrors), raw);
-  const result = await saveReflection(user, parsed.data.periodStart, parsed.data);
-  revalidatePath(`/reviews/${parsed.data.periodStart}`);
+  const { periodStart, reflection, usefulness } = parsed.data;
+  const result = await saveReflection(user, periodStart, { reflection, usefulness });
+  revalidatePath(`/reviews/${periodStart}`);
   return result.ok ? ok(null) : echoValues(result, raw);
 }
 

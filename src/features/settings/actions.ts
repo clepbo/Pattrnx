@@ -1,10 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { echoValues, fail, type FormState, formFields, ok, validationFailure } from "@/lib/action-result";
 import { requireUser } from "@/server/auth";
+import { deleteAccount } from "@/server/services/account";
 import { createLifeArea, renameLifeArea, setLifeAreaArchived } from "@/server/services/life-areas";
 import { updateProfile } from "@/server/services/profile";
 
@@ -54,4 +56,15 @@ export async function toggleAreaArchived(formData: FormData): Promise<void> {
   if (!id.success) return;
   await setLifeAreaArchived(user, id.data, formData.get("archive") === "true");
   revalidatePath("/settings");
+}
+
+export async function deleteAccountAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  const user = await requireUser();
+  const raw = formFields(formData, ["confirmation"]);
+  if (raw.confirmation.trim() !== "DELETE") {
+    return echoValues(validationFailure({ confirmation: ['Type DELETE in capitals to confirm.'] }), raw);
+  }
+  const result = await deleteAccount(user);
+  if (!result.ok) return result;
+  redirect("/?deleted=1");
 }

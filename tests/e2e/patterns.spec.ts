@@ -16,7 +16,10 @@ test.beforeEach(async ({ page }) => {
 
 test("a new user sees the still-learning state (BR-2)", async ({ page }) => {
   await signInNewUser(page, { onboarded: true });
-  await page.getByRole("link", { name: "Patterns" }).first().click();
+  // Insights → (no review before the first full week) → Patterns.
+  await page.getByRole("link", { name: "Insights" }).first().click();
+  await expect(page.getByText("Your first review comes after your first full week")).toBeVisible();
+  await page.getByRole("navigation", { name: "Insights" }).getByRole("link", { name: "Patterns" }).click();
   await expect(page.getByText("Still learning")).toBeVisible();
   await expect(page.getByText(/more days to go/)).toBeVisible();
 });

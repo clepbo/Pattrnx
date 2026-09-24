@@ -86,3 +86,10 @@ export async function seedWednesdayDropoff(userId: string, today: string) {
   // Plain inserts wait for the daily detection run (ARCHITECTURE.md §7); make it due now.
   await admin.from("profiles").update({ patterns_dirty: true }).eq("id", userId);
 }
+
+/** Moves the account's creation back so past weeks are reviewable. */
+export async function backdateAccount(userId: string, days: number) {
+  const createdAt = new Date(Date.now() - days * 86_400_000).toISOString();
+  const { error } = await adminClient().from("profiles").update({ created_at: createdAt }).eq("id", userId);
+  if (error) throw error;
+}

@@ -159,7 +159,10 @@ export async function saveReflection(
   input: { reflection: string | null; usefulness: number | null },
 ): Promise<ActionResult<null>> {
   const supabase = await createClient();
-  const { error } = await supabase.from("reviews").update(input).eq("period_start", periodStart);
+  const { error } = await supabase
+    .from("reviews")
+    .update({ reflection: input.reflection, usefulness: input.usefulness })
+    .eq("period_start", periodStart);
   return error ? fromDbError("reviews.reflection", error) : ok(null);
 }
 
