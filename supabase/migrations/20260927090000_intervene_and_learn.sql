@@ -132,35 +132,59 @@ create table public.rate_limits (
 );
 
 /**
- * Counts one hit for (current user, action) in the current fixed window and
- * returns whether it's within `p_max`. Atomic under concurrency (upsert).
+ * Counts one hit for (current user, action) in the action's current fixed window
+ * and returns whether it's within that action's limit. Limits are defined here,
+ * never by the caller: a caller-supplied window would let users clear their own
+ * counters (security review finding SR-1). Atomic under concurrency (upsert).
+ * Security definer: users can't write rate_limits directly.
  */
--- Security definer: users can't write rate_limits directly (they could reset their
--- own counters). This only ever touches the calling user's rows.
-create function public.hit_rate_limit(p_action text, p_max integer, p_window interval)
+create function public.hit_rate_limit(p_action text)
 returns boolean
 language plpgsql
 security definer
 set search_path = ''
 as $$
 declare
-  bucket timestamptz := to_timestamp(floor(extract(epoch from now()) / extract(epoch from p_window)) * extract(epoch from p_window));
+  max_hits integer;
+  window_length interval;
+  bucket timestamptz;
   hits integer;
 begin
   if auth.uid() is null then
     raise exception 'not signed in' using errcode = 'insufficient_privilege';
   end if;
+
+  case p_action
+    when 'export' then max_hits := 5; window_length := interval '1 hour';
+    else raise exception 'unknown rate-limited action: %', p_action using errcode = 'invalid_parameter_value';
+  end case;
+
+  bucket := to_timestamp(floor(extract(epoch from now()) / extract(epoch from window_length)) * extract(epoch from window_length));
   insert into public.rate_limits (user_id, action, window_start, count)
   values (auth.uid(), p_action, bucket, 1)
   on conflict (user_id, action, window_start) do update set count = public.rate_limits.count + 1
   returning count into hits;
   delete from public.rate_limits where user_id = auth.uid() and action = p_action and window_start < bucket;
-  return hits <= p_max;
+  return hits <= max_hits;
 end;
 $$;
 
-revoke execute on function public.hit_rate_limit(text, integer, interval) from public, anon;
-grant execute on function public.hit_rate_limit(text, integer, interval) to authenticated, service_role;
+revoke execute on function public.hit_rate_limit(text) from public, anon;
+grant execute on function public.hit_rate_limit(text) to authenticated, service_role;
+
+-- ---------------------------------------------------------------------------
+-- Size caps on client-writable JSON (security review SR-4): users can reach these
+-- columns through the API directly, so bound them. 64 KB is far above real use.
+-- ---------------------------------------------------------------------------
+
+alter table public.reviews add constraint reviews_content_size_check check (pg_column_size(content) <= 65536);
+alter table public.experiments add constraint experiments_metric_subject_size_check check (pg_column_size(metric_subject) <= 1024);
+alter table public.patterns
+  add constraint patterns_json_size_check check (
+    pg_column_size(evidence) <= 65536 and pg_column_size(subject) <= 4096 and pg_column_size(vars) <= 8192
+  );
+alter table public.activity_types
+  add constraint activity_types_quick_log_defaults_size_check check (pg_column_size(quick_log_defaults) <= 1024);
 
 -- ---------------------------------------------------------------------------
 -- Row-level security

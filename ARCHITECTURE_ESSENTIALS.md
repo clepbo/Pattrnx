@@ -39,7 +39,9 @@ planned pace) · `goal_strategies` · `milestones` · `actions` (one-off) ·
 derived**; status only changes via SQL `set_task_status`, which also writes the evidence activity) · `activity_types` (polarity, quick-log) · `activities` (the event log;
 `local_date`, `local_hour`) · `daily_checkins` · `outcomes` (progress readings) ·
 `patterns` (derived; also loops; lifecycle + feedback + fingerprint) ·
-`experiments` (one metric, baseline vs result) · `reviews` (weekly snapshot).
+`experiments` (one metric, baseline vs result; BR-7 limits in the DB) · `reviews`
+(weekly snapshot, generated on first view) · `rate_limits` (via
+`hit_rate_limit(action)` only).
 
 Every user-owned row: `user_id → auth.users on delete cascade`, RLS
 `user_id = auth.uid()` on all four operations.
@@ -95,6 +97,13 @@ src/server/{db,services,engines/{feasibility,progress,patterns,loops,experiments
 src/{components/ui,lib,types}   src/proxy.ts
 supabase/{migrations,tests,seed.sql}   tests/{e2e,integration,fixtures/behavior}
 ```
+
+## Security
+
+Users can call the Supabase API directly with their own token, so **the database
+is the validation boundary**: RLS plus check constraints on every column, and size
+caps on JSON. Zod in actions is for UX. Account deletion needs a recent sign-in.
+See `Docs/SECURITY_REVIEW.md`.
 
 ## Do not change casually (needs an ADR in `Docs/decisions/`)
 

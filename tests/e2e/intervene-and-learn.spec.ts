@@ -120,6 +120,10 @@ test("J6: export downloads everything the user owns, with a rate limit", async (
   expect(exported.life_areas).toHaveLength(1);
   expect(exported.activity_types.map((t: { name: string }) => t.name).sort()).toEqual(["Deep work", "Networking"]);
 
+  // SR-3: another site can't trigger the download with the user's cookies.
+  const crossSite = await page.request.get("/api/export", { headers: { "sec-fetch-site": "cross-site" } });
+  expect(crossSite.status()).toBe(403);
+
   // 5 per hour: the first download used one.
   for (let i = 0; i < 4; i++) expect((await page.request.get("/api/export")).status()).toBe(200);
   const limited = await page.request.get("/api/export");

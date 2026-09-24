@@ -85,6 +85,15 @@ intent. Where it differs from `ARCHITECTURE.md`, follow `ARCHITECTURE.md` (see i
   evidence view in `features/patterns/components/pattern-evidence.tsx`, a
   `version` bump, and a passing `pnpm test:robustness`. Comparison detectors must
   report `z` and the size of their whole test family in `comparisons`.
+- **The database is the validation boundary.** Users can call the Supabase API
+  directly, so every rule must also be a DB constraint or live in a SQL function.
+  JSON columns need a `pg_column_size` cap. Never let a client-callable function
+  take limits or privileges from its arguments (see SR-1 in `Docs/SECURITY_REVIEW.md`).
+- **Services build DB payloads explicitly.** Never pass a parsed form object straight
+  to `.insert()` / `.update()`. Extra fields become unknown columns, and TypeScript
+  doesn't catch it when the object is a variable.
+- **New user-owned tables** must be added to `services/export-tables.ts` (a test
+  fails otherwise).
 - **Triggers on user tables** that touch other tables must work when Supabase Auth
   cascades an account deletion (it runs as `supabase_auth_admin`). Use
   `security definer` for those, and keep the integration deletion test passing.

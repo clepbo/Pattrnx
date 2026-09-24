@@ -2,7 +2,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(12);
+select plan(14);
 
 insert into auth.users (id, email) values ('11111111-1111-1111-1111-111111111111', 'a@example.test');
 set local role authenticated;
@@ -43,8 +43,12 @@ select throws_ok(
 );
 
 -- Rate limits: counted server-side, users can't reset them.
-select ok(public.hit_rate_limit('export', 2, interval '1 hour') and public.hit_rate_limit('export', 2, interval '1 hour')
-          and not public.hit_rate_limit('export', 2, interval '1 hour'), 'the third hit in a window is refused');
+select ok(
+  public.hit_rate_limit('export') and public.hit_rate_limit('export') and public.hit_rate_limit('export')
+  and public.hit_rate_limit('export') and public.hit_rate_limit('export') and not public.hit_rate_limit('export'),
+  'the sixth export in an hour is refused'
+);
+select throws_ok($$ select public.hit_rate_limit('anything-else') $$, '22023', null, 'only known actions can be counted');
 select throws_ok($$ delete from public.rate_limits $$, '42501', null, 'users cannot reset their counters');
 
 -- Reviews: one per week.
@@ -52,6 +56,12 @@ insert into public.reviews (period_start, period_end, content, engine_version) v
 select throws_ok(
   $$ insert into public.reviews (period_start, period_end, content, engine_version) values ('2026-09-14', '2026-09-20', '{}', 1) $$,
   '23505', null, 'one review per user per week'
+);
+
+select throws_ok(
+  $$ insert into public.reviews (period_start, period_end, content, engine_version)
+     values ('2026-09-07', '2026-09-13', jsonb_build_object('blob', repeat(md5(random()::text), 5000)), 1) $$,
+  '23514', null, 'oversized JSON is rejected (SR-4)'
 );
 
 select * from finish();

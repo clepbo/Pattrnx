@@ -1060,10 +1060,7 @@ export type Database = {
         Args: { p_max_age?: string }
         Returns: boolean
       }
-      hit_rate_limit: {
-        Args: { p_action: string; p_max: number; p_window: string }
-        Returns: boolean
-      }
+      hit_rate_limit: { Args: { p_action: string }; Returns: boolean }
       is_valid_timezone: { Args: { tz: string }; Returns: boolean }
       set_task_status: {
         Args: {

@@ -8,19 +8,14 @@ import { createClient } from "@/server/db/server";
 
 import { EXPORT_TABLES } from "./export-tables";
 
-const EXPORTS_PER_HOUR = 5;
-
 /**
  * Everything the user owns, as JSON (PRD F15). Read through the user's own
  * session, so RLS guarantees nothing else can leak in. Rate-limited (§10).
  */
 export async function exportData(user: User): Promise<ActionResult<Record<string, unknown>>> {
   const supabase = await createClient();
-  const { data: allowed, error: limitError } = await supabase.rpc("hit_rate_limit", {
-    p_action: "export",
-    p_max: EXPORTS_PER_HOUR,
-    p_window: "1 hour",
-  });
+  // Limit (5 per hour) is defined in the SQL function, not here (security review SR-1).
+  const { data: allowed, error: limitError } = await supabase.rpc("hit_rate_limit", { p_action: "export" });
   if (limitError) return fail("unexpected", "Something went wrong. Please try again.");
   if (!allowed) return fail("limit", "You've exported several times in the last hour. Try again later.");
 
@@ -41,11 +36,23 @@ export async function exportData(user: User): Promise<ActionResult<Record<string
   });
 }
 
+/** Deleting the account needs a sign-in this recent (security review SR-2). */
+export const RECENT_SIGN_IN_MINUTES = 15;
+
+export function signedInRecently(user: Pick<User, "last_sign_in_at">, now = Date.now()): boolean {
+  if (!user.last_sign_in_at) return false;
+  return now - new Date(user.last_sign_in_at).getTime() <= RECENT_SIGN_IN_MINUTES * 60_000;
+}
+
 /**
  * Deletes the auth user; every row cascades (FR-10). Uses the service role
- * because users can't delete their own auth record through the API.
+ * because users can't delete their own auth record through the API. Requires a
+ * recent sign-in so a stolen or forgotten session can't erase an account.
  */
 export async function deleteAccount(user: User): Promise<ActionResult<null>> {
+  if (!signedInRecently(user)) {
+    return fail("unauthorized", "For your security, sign in again before deleting your account.");
+  }
   const admin = createAdminClient();
   const { error } = await admin.auth.admin.deleteUser(user.id);
   if (error) {
