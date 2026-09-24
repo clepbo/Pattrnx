@@ -108,7 +108,8 @@ app / features  →  services  →  engines (pure)
 ├── src/
 │   ├── app/
 │   │   ├── (marketing)/         landing page (public)
-│   │   ├── (auth)/              login, signup, verify, reset
+│   │   ├── (auth)/              login, signup, forgot/reset password, check-email
+│   │   ├── auth/confirm/        route handler for every auth email link (token_hash → session)
 │   │   ├── (app)/               authenticated shell
 │   │   │   ├── today/
 │   │   │   ├── goals/           list, [goalId] (health, milestones, actions)
@@ -129,7 +130,8 @@ app / features  →  services  →  engines (pure)
 │   │   └── schemas.ts           Zod input schemas
 │   ├── components/ui/           shared primitives (shadcn/ui), charts/
 │   ├── server/
-│   │   ├── db/                  client factories, generated types (database.types.ts)
+│   │   ├── db/                  client factories, generated types (database.types.ts),
+│   │   │                        database.ts (typed overrides; import `Database` from here)
 │   │   ├── services/            one module per aggregate (goals, tasks, patterns, …)
 │   │   ├── engines/             pure domain logic, colocated *.test.ts
 │   │   │   ├── feasibility/
@@ -140,19 +142,23 @@ app / features  →  services  →  engines (pure)
 │   │   │   ├── interventions/   static catalog
 │   │   │   └── language/        summary templates + wording guard
 │   │   ├── ai/                  (P2)
-│   │   └── auth/                getUser / requireUser helpers
-│   ├── lib/                     framework-agnostic utilities (dates, money, result types)
-│   └── types/                   shared domain types (engine I/O)
+│   │   └── auth/                getUser / requireUser, route groups, CSP builder
+│   ├── lib/                     framework-agnostic utilities (dates, env, redirects, result types)
+│   ├── types/                   shared domain types (engine I/O)
+│   └── proxy.ts                 Next 16 "proxy" (formerly middleware): CSP nonce, session refresh, auth redirects
 ├── supabase/
 │   ├── config.toml
 │   ├── migrations/              timestamped SQL, the only way the schema changes
-│   ├── seed.sql                 local dev seed (default life areas, demo user)
-│   └── tests/                   pgTAP RLS tests
+│   ├── seed.sql                 local dev seed (demo user)
+│   ├── templates/               auth email templates (links point at /auth/confirm)
+│   └── tests/database/          pgTAP tests (RLS, triggers, constraints)
 ├── tests/
 │   ├── e2e/                     Playwright journeys J1–J6
-│   ├── integration/             services against local Supabase
+│   ├── integration/             services and API paths against local Supabase
+│   ├── support/                 local Supabase + Mailpit helpers for tests
 │   └── fixtures/behavior/       synthetic behavior datasets for engine tests
-└── .github/workflows/           CI
+├── scripts/                     dev/CI helpers (local-env.sh)
+└── .github/                     CI workflow, Dependabot
 ```
 
 ## 4. Data Architecture
@@ -169,7 +175,9 @@ app / features  →  services  →  engines (pure)
    analytics store are not needed at MVP scale (§19). Activities are append-mostly
    and timestamped.
 4. **`local_date` is stored** on activities, tasks, outcomes and check-ins,
-   computed from the user's timezone at write time. Changing timezone later doesn't
+   computed from the user's timezone at write time. For activities a `before
+   insert or update` trigger derives `local_date`, `local_hour` and `life_area_id`
+   and ignores client-supplied values, so they can't be forged or drift. Changing timezone later doesn't
    retroactively move history (a "Tuesday" stays Tuesday).
 5. **Enums are Postgres enums** where the set is closed and referenced by engine
    code. Adding a value is a migration plus an engine change.
@@ -332,11 +340,11 @@ default false`, `quick_log_defaults jsonb` (e.g. `{"duration_min":30}`),
 | Column | Type | Notes |
 |---|---|---|
 | activity_type_id | uuid not null → activity_types restrict | |
-| life_area_id | uuid not null | denormalized from type at insert |
-| goal_id | uuid → goals set null | |
-| task_id | uuid → tasks **on delete cascade**, unique | FR-4: at most one activity per task |
-| occurred_at | timestamptz not null | ≤ now() + 5 min (check in action), ≥ 2000-01-01 |
-| local_date | date not null | from profile tz at write |
+| life_area_id | uuid not null | derived from the type by trigger |
+| goal_id | uuid → goals set null | added with the goals migration (M2) |
+| task_id | uuid → tasks **on delete cascade**, unique | FR-4: at most one activity per task. Added with the tasks migration (M2) |
+| occurred_at | timestamptz not null default now() | ≤ now() + 5 min (enforced by trigger), ≥ 2000-01-01 |
+| local_date | date not null | derived by trigger from profile tz |
 | local_hour | smallint not null | 0–23, for timing detectors |
 | duration_minutes | int | 0–1440 |
 | quantity | numeric | e.g. money amount |
@@ -494,7 +502,12 @@ type ActionResult<T> =
 - **Authentication:** Supabase Auth. Email + password (min 10 chars, checked
   against the leaked-password list, a Supabase setting) with required email
   verification, and magic-link sign-in. Session in httpOnly, Secure, SameSite=Lax
-  cookies via `@supabase/ssr`. Middleware refreshes the session on each request.
+  cookies via `@supabase/ssr`. `src/proxy.ts` (Next 16's renamed middleware) refreshes
+  the session on each request with `auth.getClaims()` and handles auth redirects.
+  Every auth email links to `/auth/confirm` (token_hash flow), which exchanges the
+  token for a session cookie. Magic links never create accounts
+  (`shouldCreateUser: false`), and sign-up, magic-link and reset responses are
+  identical for known and unknown emails (no account enumeration).
 - **Session policy:** access token 1 h, refresh token rotation on, reuse detection
   on. Inactivity timeout 30 days, absolute 90 days (Supabase session settings).
   Sign out = revoke refresh token. "Sign out everywhere" on password change and
@@ -720,7 +733,7 @@ milestone.
 | Rate limiting | Supabase Auth built-in limits on sign-in/sign-up/OTP. Export limited to 5/hour/user via a small Postgres counter. AI quota (P2) |
 | Session | §6 policy. Secure, httpOnly, SameSite=Lax cookies |
 | Secrets | Env vars only (Vercel/Supabase dashboards). `.env*` gitignored. Service role key server-only, import-restricted |
-| Security headers | `next.config` headers: CSP (self + Supabase origin), HSTS, X-Content-Type-Options, Referrer-Policy strict-origin-when-cross-origin, Permissions-Policy, frame-ancestors 'none' |
+| Security headers | Per-request nonce CSP set in `src/proxy.ts` (`script-src 'nonce-…' 'strict-dynamic'`, connect-src self + Supabase origin). This makes every page dynamically rendered, which is acceptable for an authenticated app. `next.config` headers: HSTS, X-Content-Type-Options, Referrer-Policy strict-origin-when-cross-origin, Permissions-Policy, frame-ancestors 'none' |
 | CORS | No cross-origin API in MVP. Route handlers don't set permissive CORS |
 | Transport | HTTPS only (Vercel), HSTS. Supabase connections over TLS |
 | Data protection | Encryption at rest (Supabase managed). No behavioral content in logs, errors or analytics. Sentry `beforeSend` scrubs request bodies |
@@ -790,8 +803,11 @@ truth" requirement is tested.
 | staging | Vercel `staging` branch | Supabase staging project | Pre-release, e2e nightly |
 | production | Vercel `main` | Supabase production project (region per Q1) | Users |
 
-CI (GitHub Actions) on every PR: install → typecheck → lint → unit → start local
-Supabase → migrations → pgTAP → integration → Playwright smoke → build.
+CI (`.github/workflows/ci.yml`) on every PR, in two parallel jobs:
+(1) typecheck → lint → unit tests (under `TZ=America/Los_Angeles`, to catch
+server-timezone bugs) → `pnpm audit`; (2) start local Supabase (migrations + seed)
+→ `db lint` → pgTAP → generated-types drift check → integration → build →
+Playwright.
 Migrations are applied to staging, then production, with `supabase db push`, gated
 on manual approval for production. Migrations are forward-only. Destructive
 changes follow expand → migrate → contract.
@@ -810,9 +826,11 @@ Backups: Supabase daily backups, plus PITR before public launch.
 | `SENTRY_DSN` | server (optional) | Error reporting |
 | `FEATURE_AI` | server | `false` in MVP |
 | `AI_PROVIDER_API_KEY`, `AI_MODEL` | server (P2) | LLM access |
+| `MAILPIT_URL` | tests only | Local email inbox for e2e |
 
-A typed `src/lib/env.ts` validates env with Zod at boot and fails fast on anything
-missing or malformed. `.env.example` lists every variable, with no values.
+A typed `src/lib/env.ts` validates env with Zod on first use and fails fast on
+anything missing or malformed. `pnpm env:local` writes `.env.local` from the
+running local Supabase stack. `.env.example` lists every variable, with no values.
 
 ## 17. Integrations
 

@@ -9,8 +9,26 @@ change them.
 
 ## Status
 
-**Phase 0: kickoff complete, awaiting architecture approval.** There's no
-application code yet, only planning documents and the folder scaffold.
+**Milestone 1 (Foundation) complete:** app scaffold, database foundation with
+row-level security, email auth, and CI. See `FLOAT.md` for what's next.
+
+## Local development
+
+Requires Node 22+, pnpm and Docker.
+
+```bash
+pnpm install
+pnpm db:start        # local Supabase (Postgres, Auth, Mailpit)
+pnpm env:local       # writes .env.local from the running stack
+pnpm dev             # http://localhost:3000
+```
+
+Demo login: `demo@pattrnx.local` / `pattrnx-demo-123`. Sign-up and reset emails
+arrive in Mailpit at http://127.0.0.1:54324.
+
+Checks: `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm db:test`,
+`pnpm test:integration`, `pnpm build && pnpm test:e2e`. The full list is in
+`AGENTS.md` §9.
 
 ## Documents
 
@@ -24,7 +42,7 @@ application code yet, only planning documents and the folder scaffold.
 | [`Docs/KICKOFF_REVIEW.md`](Docs/KICKOFF_REVIEW.md) | Stress test: risks, edge cases, simplifications, readiness checklist |
 | [`Docs/architecture.md`](Docs/architecture.md) | Original product blueprint |
 
-## Planned stack
+## Stack
 
-Next.js (App Router) · TypeScript · Tailwind + shadcn/ui · Supabase (Postgres,
+Next.js 16 (App Router) · TypeScript · Tailwind + shadcn/ui · Supabase (Postgres,
 Auth, RLS) · Zod · Vitest · Playwright · Vercel. See `ARCHITECTURE.md` §1.

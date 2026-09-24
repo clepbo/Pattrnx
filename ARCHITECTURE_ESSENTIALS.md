@@ -47,7 +47,8 @@ Every user-owned row: `user_id → auth.users on delete cascade`, RLS
 ## Auth
 
 Supabase Auth: email+password (verified) + magic link. Cookie sessions via
-`@supabase/ssr`. `requireUser()` uses `auth.getUser()`. One role. The service-role
+`@supabase/ssr`, refreshed in `src/proxy.ts` (Next 16's middleware), which also sets
+the per-request CSP nonce. Auth emails link to `/auth/confirm`. `requireUser()` uses `auth.getUser()`. One role. The service-role
 client is imported **only** from `src/server/db/admin.ts`, used by the cron route
 and account deletion.
 
@@ -89,7 +90,7 @@ src/app/(app)/{today,goals,routines,log,patterns,experiments,reviews,onboarding,
 src/app/api/{export,cron/weekly,health}
 src/features/<feature>/{components,actions.ts,schemas.ts}
 src/server/{db,services,engines/{feasibility,progress,patterns,loops,experiments,interventions,language},ai,auth}
-src/{components/ui,lib,types}
+src/{components/ui,lib,types}   src/proxy.ts
 supabase/{migrations,tests,seed.sql}   tests/{e2e,integration,fixtures/behavior}
 ```
 

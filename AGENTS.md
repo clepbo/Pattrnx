@@ -50,8 +50,12 @@ intent. Where it differs from `ARCHITECTURE.md`, follow `ARCHITECTURE.md` (see i
 - **Layering:** `app`/`features` → `services` → (`db`, `engines`). Client
   components never import `src/server/**`.
 - **Authorization is RLS.** Every new table ships in the same migration with
-  `user_id` (FK → `auth.users on delete cascade`), RLS enabled, four policies, and
-  a pgTAP cross-user test.
+  `user_id uuid not null default auth.uid()` (FK → `auth.users on delete
+  cascade`), RLS enabled, four `to authenticated` policies using
+  `(select auth.uid()) = user_id`, `revoke all … from anon`, a `unique (id,
+  user_id)` constraint, and cross-user pgTAP tests. References to other
+  user-owned rows use composite FKs `(x_id, user_id)`. Follow
+  `supabase/migrations/20260924120000_foundation.sql`.
 - **Service role** is only imported from `src/server/db/admin.ts`, and only by
   `/api/cron/*` and account deletion.
 - **Validate every input** with Zod in the action/handler. Never trust ids from the
@@ -66,7 +70,15 @@ intent. Where it differs from `ARCHITECTURE.md`, follow `ARCHITECTURE.md` (see i
 - **No behavioral content in logs** (notes, titles, amounts, moods). Log ids and
   outcomes only.
 - **Schema changes only via** a new file in `supabase/migrations/`. Never edit an
-  applied migration. Regenerate `src/server/db/database.types.ts` after.
+  applied migration. Run `pnpm db:types` after (CI fails on drift). Import
+  `Database`/`Tables` from `@/server/db/database`, which corrects the generated
+  types (e.g. trigger-derived columns aren't insertable).
+- **Next.js 16:** request interception lives in `src/proxy.ts` (the renamed
+  middleware). `params`/`searchParams`/`cookies()`/`headers()` are async. Check
+  `node_modules/next/dist/docs/` before using an API from memory.
+- **Forms:** client form components use `useActionState` with a server action
+  returning `ActionResult` (see `src/features/auth`). Failures echo back
+  non-secret values, because React resets forms after an action.
 - Don't use `dangerouslySetInnerHTML`, and don't build dynamic SQL from input.
 
 ## 4. Conventions
@@ -115,11 +127,26 @@ assumption in `FLOAT.md` if you proceed on a minor one.
 3. Identify dependencies and affected tables, engines and pages.
 4. Choose the smallest appropriate change.
 5. Implement it, with tests: engine unit tests first where logic is involved.
-6. Run `pnpm typecheck && pnpm lint && pnpm test`, plus `pnpm test:integration`
-   and `supabase test db` when the DB is touched.
+6. Run `pnpm typecheck && pnpm lint && pnpm test`, plus `pnpm db:test`,
+   `pnpm db:lint` and `pnpm test:integration` when the DB is touched, and
+   `pnpm test:e2e` when a user journey is touched.
 7. Verify existing behavior is intact. Update docs and `FLOAT.md`.
 
-## 9. Definition of done
+## 9. Commands
+
+| Task | Command |
+|---|---|
+| First-time setup | `pnpm install && pnpm db:start && pnpm env:local` |
+| Dev server | `pnpm dev` (demo login: `demo@pattrnx.local` / `pattrnx-demo-123`; emails in Mailpit at http://127.0.0.1:54324) |
+| Typecheck / lint | `pnpm typecheck && pnpm lint` |
+| Unit tests | `pnpm test` (`pnpm test:coverage` for coverage) |
+| DB tests / lint | `pnpm db:test && pnpm db:lint` |
+| Reset DB (migrations + seed) | `pnpm db:reset` |
+| Regenerate DB types | `pnpm db:types` |
+| Integration tests | `pnpm test:integration` (needs local Supabase) |
+| E2E | `pnpm build && pnpm test:e2e` (needs local Supabase) |
+
+## 10. Definition of done
 
 - Typecheck, lint, unit, integration and RLS tests pass. E2E smoke passes for
   touched journeys.
@@ -127,3 +154,13 @@ assumption in `FLOAT.md` if you proceed on a minor one.
   including the noise fixture.
 - No new dependency without justification. No secrets committed.
 - Docs updated if architecture, schema or rules changed.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
