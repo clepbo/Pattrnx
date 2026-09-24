@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { InsightsNav } from "@/components/layout/insights-nav";
 import { PatternCard } from "@/features/patterns/components/pattern-card";
 import { requireUser } from "@/server/auth";
 import { getPatternsView, markPresented } from "@/server/services/patterns";
@@ -13,6 +14,7 @@ export default async function PatternsPage() {
 
   return (
     <div className="grid gap-8">
+      <InsightsNav current="/patterns" />
       <div className="grid gap-1">
         <h1 className="text-2xl font-semibold tracking-tight">Patterns</h1>
         <p className="text-muted-foreground text-sm">

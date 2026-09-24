@@ -10,13 +10,14 @@ export const APP_NAV = [
   { href: "/goals", label: "Goals" },
   { href: "/routines", label: "Routines" },
   { href: "/log", label: "Log" },
-  { href: "/patterns", label: "Patterns" },
+  { href: "/reviews", label: "Insights", also: ["/patterns", "/experiments"] },
   { href: "/settings", label: "Settings" },
 ] as const;
 
 function useIsActive() {
   const pathname = usePathname();
-  return (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+  return (href: string, also: readonly string[] = []) =>
+    [href, ...also].some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 }
 
 /** Inline links in the header on wider screens. */
@@ -29,7 +30,7 @@ export function DesktopNav() {
           <li key={item.href}>
             <Link
               href={item.href}
-              aria-current={isActive(item.href) ? "page" : undefined}
+              aria-current={isActive(item.href, "also" in item ? item.also : []) ? "page" : undefined}
               className="hover:bg-muted aria-[current=page]:bg-muted inline-flex h-11 items-center rounded-lg px-3 text-sm aria-[current=page]:font-medium"
             >
               {item.label}
@@ -51,7 +52,7 @@ export function MobileNav() {
           <li key={item.href}>
             <Link
               href={item.href}
-              aria-current={isActive(item.href) ? "page" : undefined}
+              aria-current={isActive(item.href, "also" in item ? item.also : []) ? "page" : undefined}
               className={cn(
                 "text-muted-foreground flex h-14 items-center justify-center text-[11px]",
                 "aria-[current=page]:text-foreground aria-[current=page]:font-semibold",

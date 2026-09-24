@@ -140,6 +140,7 @@ export async function refreshPatterns(user: User, { force = false } = {}): Promi
       subject: p.subject,
       summary: p.summary,
       evidence: p.evidence as TablesInsert<"patterns">["evidence"],
+      vars: p.vars,
       observations: p.observations,
       effect_size: Math.min(1, Math.max(0, p.effectSize)),
       confidence: p.confidence,
