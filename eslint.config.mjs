@@ -26,6 +26,7 @@ const eslintConfig = defineConfig([
   {
     // Last so it wins over the block above for engine files.
     files: ["src/server/engines/**/*.ts"],
+    ignores: ["src/server/engines/**/*.test.ts"],
     rules: {
       "no-restricted-imports": ["error", { patterns: ENGINE_FORBIDDEN }],
       "no-restricted-globals": [
