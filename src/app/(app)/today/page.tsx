@@ -16,6 +16,7 @@ import { requireUser } from "@/server/auth";
 import { isMoneyType, listActivityTypes, quickLogMinutes } from "@/server/services/activity-types";
 import { getCheckin } from "@/server/services/checkins";
 import { listExperiments } from "@/server/services/experiments";
+import { unseenLatestReview } from "@/server/services/reviews";
 import { listGoals } from "@/server/services/goals";
 import { getProfile } from "@/server/services/profile";
 import { getPatternsView, markPresented } from "@/server/services/patterns";
@@ -60,6 +61,7 @@ export default async function TodayPage() {
     getPatternsView(user, { limit: 1 }),
     listExperiments(user),
   ]);
+  const reviewReady = await unseenLatestReview(user);
   // PRD F10: at most one pattern on Today.
   const watch = patterns.status === "ready" ? patterns.visible[0] : undefined;
   if (watch) await markPresented(user, [watch.id]);
@@ -80,6 +82,13 @@ export default async function TodayPage() {
           </p>
         )}
       </div>
+
+      {reviewReady && (
+        <Link href={`/reviews/${reviewReady}`} className="border-primary/40 bg-muted grid gap-1 rounded-xl border p-4">
+          <span className="font-medium">Your review of last week is ready</span>
+          <span className="text-muted-foreground text-sm">What got done, what repeated, and one thing to try next.</span>
+        </Link>
+      )}
 
       <section aria-labelledby="focus-heading" className="grid gap-4">
         <h2 id="focus-heading" className="text-lg font-medium">
