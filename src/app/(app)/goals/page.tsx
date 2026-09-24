@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
-import { FEASIBILITY_LABELS } from "@/features/goals/feasibility-copy";
+import { HEALTH_LABELS } from "@/features/goals/health-copy";
 import { assertLocalDate } from "@/lib/dates";
 import { formatLocalDate } from "@/lib/format";
 import { requireUser } from "@/server/auth";
@@ -44,8 +44,8 @@ export default async function GoalsPage() {
           <section key={group.title} className="grid gap-3" aria-label={group.title}>
             {other.length > 0 && <h2 className="text-muted-foreground text-sm font-medium">{group.title}</h2>}
             <ul className="grid gap-3">
-              {group.items.map(({ goal, feasibility }) => {
-                const badge = FEASIBILITY_LABELS[feasibility.state];
+              {group.items.map(({ goal, health }) => {
+                const badge = HEALTH_LABELS[health.state];
                 return (
                   <li key={goal.id}>
                     <Link href={`/goals/${goal.id}`} className="border-border hover:bg-muted grid gap-2 rounded-xl border p-4">

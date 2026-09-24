@@ -35,3 +35,54 @@ export async function signInNewUser(page: Page, { onboarded = false, timezone = 
   await expect(page).toHaveURL(onboarded ? /\/today$/ : /\/onboarding$/);
   return { email, userId };
 }
+
+/**
+ * Gives a user 60 days of history for a Mon–Fri routine that's reliably done
+ * except on Wednesdays, which should surface as a weekday pattern.
+ */
+export async function seedWednesdayDropoff(userId: string, today: string) {
+  const { addDays, assertLocalDate, eachDay, weekdayOf } = await import("@/lib/dates");
+  const admin = adminClient();
+  const start = addDays(assertLocalDate(today), -60);
+  const { data: area } = await admin.from("life_areas").select("id").eq("user_id", userId).limit(1).single();
+  if (!area) throw new Error("seed needs an onboarded user");
+  const { data: type } = await admin
+    .from("activity_types")
+    .insert({ user_id: userId, life_area_id: area.id, name: "Design practice", polarity: "desired" })
+    .select()
+    .single();
+  if (!type) throw new Error("activity type seed failed");
+  const createdAt = `${start}T08:00:00Z`;
+  const { data: routine } = await admin
+    .from("routines")
+    .insert({
+      user_id: userId,
+      name: "Design practice",
+      activity_type_id: type.id,
+      days_of_week: [1, 2, 3, 4, 5],
+      normal_minutes: 30,
+      active_from: start,
+      created_at: createdAt,
+    })
+    .select()
+    .single();
+  if (!routine) throw new Error("routine seed failed");
+
+  const days = eachDay(start, addDays(assertLocalDate(today), -1)).filter((d) => [1, 2, 3, 4, 5].includes(weekdayOf(d)));
+  const { error } = await admin.from("tasks").insert(
+    days.map((date, i) => ({
+      user_id: userId,
+      title: "Design practice",
+      source: "routine" as const,
+      routine_id: routine.id,
+      activity_type_id: type.id,
+      scheduled_date: date,
+      planned_minutes: 30,
+      // Wednesdays: 1 in 9 done. Other days: all done but every 10th.
+      status: (weekdayOf(date) === 3 ? (i % 9 === 0 ? "done" : "skipped") : i % 10 === 0 ? "skipped" : "done") as "done" | "skipped",
+    })),
+  );
+  if (error) throw error;
+  // Plain inserts wait for the daily detection run (ARCHITECTURE.md §7); make it due now.
+  await admin.from("profiles").update({ patterns_dirty: true }).eq("id", userId);
+}

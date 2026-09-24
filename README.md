@@ -9,9 +9,9 @@ change them.
 
 ## Status
 
-**Milestone 2 (Plan and execute) in review.** Onboarding, goals with a
-feasibility check, milestones and actions, routines with a minimum version, the
-Today plan, activity logging and daily check-ins. See `FLOAT.md` for what's next.
+**Milestone 3 (Understand) in review.** Goal health, the plan-vs-reality strip,
+statistically calibrated pattern and loop detection with inspectable evidence and
+feedback. See `FLOAT.md` for what's next.
 
 ## Local development
 

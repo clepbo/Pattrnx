@@ -553,6 +553,84 @@ export type Database = {
           },
         ]
       }
+      patterns: {
+        Row: {
+          confidence: Database["public"]["Enums"]["pattern_confidence"]
+          created_at: string
+          detector_key: string
+          detector_version: number
+          effect_size: number
+          evidence: Json
+          feedback: Database["public"]["Enums"]["pattern_feedback"] | null
+          feedback_at: string | null
+          fingerprint: string
+          first_detected_at: string
+          id: string
+          kind: Database["public"]["Enums"]["pattern_kind"]
+          last_detected_at: string
+          observations: number
+          presented_at: string | null
+          status: Database["public"]["Enums"]["pattern_status"]
+          subject: Json
+          summary: string
+          suppressed: boolean
+          updated_at: string
+          user_id: string
+          window_end: string
+          window_start: string
+        }
+        Insert: {
+          confidence: Database["public"]["Enums"]["pattern_confidence"]
+          created_at?: string
+          detector_key: string
+          detector_version: number
+          effect_size: number
+          evidence?: Json
+          feedback?: Database["public"]["Enums"]["pattern_feedback"] | null
+          feedback_at?: string | null
+          fingerprint: string
+          first_detected_at?: string
+          id?: string
+          kind: Database["public"]["Enums"]["pattern_kind"]
+          last_detected_at?: string
+          observations: number
+          presented_at?: string | null
+          status?: Database["public"]["Enums"]["pattern_status"]
+          subject?: Json
+          summary: string
+          suppressed?: boolean
+          updated_at?: string
+          user_id?: string
+          window_end: string
+          window_start: string
+        }
+        Update: {
+          confidence?: Database["public"]["Enums"]["pattern_confidence"]
+          created_at?: string
+          detector_key?: string
+          detector_version?: number
+          effect_size?: number
+          evidence?: Json
+          feedback?: Database["public"]["Enums"]["pattern_feedback"] | null
+          feedback_at?: string | null
+          fingerprint?: string
+          first_detected_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["pattern_kind"]
+          last_detected_at?: string
+          observations?: number
+          presented_at?: string | null
+          status?: Database["public"]["Enums"]["pattern_status"]
+          subject?: Json
+          summary?: string
+          suppressed?: boolean
+          updated_at?: string
+          user_id?: string
+          window_end?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           ai_processing_consent: boolean
@@ -561,6 +639,8 @@ export type Database = {
           display_name: string | null
           id: string
           onboarding_completed_at: string | null
+          patterns_checked_at: string | null
+          patterns_dirty: boolean
           timezone: string
           updated_at: string
           week_starts_on: number
@@ -572,6 +652,8 @@ export type Database = {
           display_name?: string | null
           id: string
           onboarding_completed_at?: string | null
+          patterns_checked_at?: string | null
+          patterns_dirty?: boolean
           timezone?: string
           updated_at?: string
           week_starts_on?: number
@@ -583,6 +665,8 @@ export type Database = {
           display_name?: string | null
           id?: string
           onboarding_completed_at?: string | null
+          patterns_checked_at?: string | null
+          patterns_dirty?: boolean
           timezone?: string
           updated_at?: string
           week_starts_on?: number
@@ -792,6 +876,10 @@ export type Database = {
     Functions: {
       are_valid_days_of_week: { Args: { days: number[] }; Returns: boolean }
       are_valid_tags: { Args: { tags: string[] }; Returns: boolean }
+      claim_pattern_detection: {
+        Args: { p_max_age?: string }
+        Returns: boolean
+      }
       is_valid_timezone: { Args: { tz: string }; Returns: boolean }
       set_task_status: {
         Args: {
@@ -833,6 +921,22 @@ export type Database = {
       milestone_status: "pending" | "in_progress" | "done" | "dropped"
       outcome_valence: "positive" | "negative" | "neutral" | "unknown"
       pace_period: "day" | "week" | "month"
+      pattern_confidence: "low" | "moderate" | "high" | "very_high"
+      pattern_feedback: "accurate" | "partially_accurate" | "not_accurate"
+      pattern_kind:
+        | "frequency"
+        | "deviation"
+        | "timing"
+        | "streak"
+        | "breaking_point"
+        | "sequence"
+        | "loop"
+      pattern_status:
+        | "candidate"
+        | "presented"
+        | "acknowledged"
+        | "dismissed"
+        | "resolved"
       task_source: "manual" | "action" | "routine"
       task_status: "planned" | "done" | "done_minimum" | "skipped"
     }
@@ -973,6 +1077,24 @@ export const Constants = {
       milestone_status: ["pending", "in_progress", "done", "dropped"],
       outcome_valence: ["positive", "negative", "neutral", "unknown"],
       pace_period: ["day", "week", "month"],
+      pattern_confidence: ["low", "moderate", "high", "very_high"],
+      pattern_feedback: ["accurate", "partially_accurate", "not_accurate"],
+      pattern_kind: [
+        "frequency",
+        "deviation",
+        "timing",
+        "streak",
+        "breaking_point",
+        "sequence",
+        "loop",
+      ],
+      pattern_status: [
+        "candidate",
+        "presented",
+        "acknowledged",
+        "dismissed",
+        "resolved",
+      ],
       task_source: ["manual", "action", "routine"],
       task_status: ["planned", "done", "done_minimum", "skipped"],
     },

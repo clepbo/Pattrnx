@@ -80,6 +80,14 @@ intent. Where it differs from `ARCHITECTURE.md`, follow `ARCHITECTURE.md` (see i
   returning `ActionResult` (see `src/features/auth`). Failures echo back
   non-secret values, because React resets forms after an action.
 - Don't use `dangerouslySetInnerHTML`, and don't build dynamic SQL from input.
+- **Pattern detectors:** every new or changed detector needs a planted persona in
+  `tests/fixtures/behavior`, a template in `engines/language/templates.ts`, an
+  evidence view in `features/patterns/components/pattern-evidence.tsx`, a
+  `version` bump, and a passing `pnpm test:robustness`. Comparison detectors must
+  report `z` and the size of their whole test family in `comparisons`.
+- **Triggers on user tables** that touch other tables must work when Supabase Auth
+  cascades an account deletion (it runs as `supabase_auth_admin`). Use
+  `security definer` for those, and keep the integration deletion test passing.
 
 ## 4. Conventions
 
@@ -145,6 +153,7 @@ assumption in `FLOAT.md` if you proceed on a minor one.
 | Regenerate DB types | `pnpm db:types` |
 | Integration tests | `pnpm test:integration` (needs local Supabase) |
 | E2E | `pnpm build && pnpm test:e2e` (needs local Supabase) |
+| Pattern calibration | `pnpm test:robustness` (300 noise users + 30 seeds per persona; run after any detector or threshold change) |
 
 ## 10. Definition of done
 

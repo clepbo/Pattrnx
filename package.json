@@ -18,7 +18,8 @@
     "db:test": "supabase test db",
     "db:lint": "supabase db lint --level warning --fail-on warning",
     "db:types": "supabase gen types typescript --local > src/server/db/database.types.ts",
-    "env:local": "scripts/local-env.sh > .env.local"
+    "env:local": "scripts/local-env.sh > .env.local",
+    "test:robustness": "PATTERN_ROBUSTNESS=1 vitest run --project unit src/server/engines/patterns/robustness.test.ts"
   },
   "dependencies": {
     "@date-fns/tz": "^1.5.0",

@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { CheckinForm } from "@/features/activities/components/checkin-form";
 import { QuickLog } from "@/features/activities/components/quick-log";
+import { HEALTH_LABELS } from "@/features/goals/health-copy";
+import { PatternCard } from "@/features/patterns/components/pattern-card";
 import { AddTaskForm } from "@/features/today/components/add-task-form";
 import { TaskItem, type TaskView } from "@/features/today/components/task-item";
 import { assertLocalDate, localHourOf } from "@/lib/dates";
@@ -13,6 +16,7 @@ import { isMoneyType, listActivityTypes, quickLogMinutes } from "@/server/servic
 import { getCheckin } from "@/server/services/checkins";
 import { listGoals } from "@/server/services/goals";
 import { getProfile } from "@/server/services/profile";
+import { getPatternsView, markPresented } from "@/server/services/patterns";
 import { getDayPlan, type TaskRow } from "@/server/services/tasks";
 
 export const metadata: Metadata = { title: "Today" };
@@ -49,7 +53,10 @@ export default async function TodayPage() {
   const user = await requireUser();
   const profile = await getProfile(user);
   const [plan, types, goals] = await Promise.all([getDayPlan(user), listActivityTypes(user), listGoals(user, { statuses: ["active"] })]);
-  const checkin = await getCheckin(user, plan.today);
+  const [checkin, patterns] = await Promise.all([getCheckin(user, plan.today), getPatternsView(user, { limit: 1 })]);
+  // PRD F10: at most one pattern on Today.
+  const watch = patterns.status === "ready" ? patterns.visible[0] : undefined;
+  if (watch) await markPresented(user, [watch.id]);
   const done = plan.tasks.filter((t) => t.status === "done" || t.status === "done_minimum").length;
   const missedRecent = plan.recent.filter((t) => t.status === "planned");
 
@@ -104,6 +111,20 @@ export default async function TodayPage() {
         <AddTaskForm today={plan.today} goals={goals.map(({ goal }) => ({ id: goal.id, title: goal.title }))} />
       </section>
 
+      {watch && (
+        <section aria-labelledby="watch-heading" className="grid gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 id="watch-heading" className="text-lg font-medium">
+              Pattern to watch
+            </h2>
+            <Link href="/patterns" className="text-muted-foreground text-sm underline-offset-4 hover:underline">
+              All patterns
+            </Link>
+          </div>
+          <PatternCard pattern={watch} />
+        </section>
+      )}
+
       <section aria-labelledby="quick-log-heading" className="grid gap-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 id="quick-log-heading" className="text-lg font-medium">
@@ -139,6 +160,24 @@ export default async function TodayPage() {
           }}
         />
       </section>
+
+      {goals.length > 0 && (
+        <section aria-labelledby="goals-heading" className="grid gap-3">
+          <h2 id="goals-heading" className="text-lg font-medium">
+            Active goals
+          </h2>
+          <ul className="grid gap-2">
+            {goals.map(({ goal, health }) => (
+              <li key={goal.id}>
+                <Link href={`/goals/${goal.id}`} className="border-border hover:bg-muted flex items-center justify-between gap-2 rounded-lg border px-3 py-2">
+                  <span className="text-sm">{goal.title}</span>
+                  <StatusBadge tone={HEALTH_LABELS[health.state].tone}>{HEALTH_LABELS[health.state].label}</StatusBadge>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {plan.recent.length > 0 && (
         <section aria-labelledby="recent-heading" className="grid gap-4">

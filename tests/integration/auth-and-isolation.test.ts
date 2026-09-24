@@ -78,6 +78,8 @@ describe("row-level security through the API", () => {
     }
   });
 
+  // Runs through the real Auth API: Supabase deletes as supabase_auth_admin, so every
+  // trigger on the cascade must work for that role (a regression pgTAP can't reproduce).
   it("removes every row when the account is deleted", async () => {
     const { client, user } = await signedInUser();
     const { data: area } = await client.from("life_areas").insert({ name: "Health" }).select().single();
