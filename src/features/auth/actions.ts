@@ -4,7 +4,7 @@ import type { AuthError } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 import type { z } from "zod";
 
-import { type ActionResult, fail } from "@/lib/action-result";
+import { echoValues as echo, fail, type FormState, formFields as fields, validationFailure as toFailure } from "@/lib/action-result";
 import { safeNextPath } from "@/lib/redirects";
 import { createClient } from "@/server/db/server";
 
@@ -16,22 +16,10 @@ import {
   signUpSchema,
 } from "./schemas";
 
-/** Failures echo back non-secret inputs so the form can re-fill them (React resets forms after an action). */
-export type AuthFormState = (ActionResult<null> & { values?: Record<string, string> }) | null;
-
-const SECRET_FIELDS = new Set(["password", "confirmPassword"]);
-
-function fields(formData: FormData, names: string[]): Record<string, string> {
-  return Object.fromEntries(names.map((name) => [name, String(formData.get(name) ?? "")]));
-}
-
-function echo(state: AuthFormState, raw: Record<string, string>): AuthFormState {
-  if (!state) return state;
-  return { ...state, values: Object.fromEntries(Object.entries(raw).filter(([key]) => !SECRET_FIELDS.has(key))) };
-}
+export type AuthFormState = FormState;
 
 function validationFailure(error: z.ZodError): AuthFormState {
-  return fail("validation", "Check the highlighted fields.", error.flatten().fieldErrors as Record<string, string[]>);
+  return toFailure(error.flatten().fieldErrors);
 }
 
 function authFailure(action: string, error: AuthError): AuthFormState {

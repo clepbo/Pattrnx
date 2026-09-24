@@ -36,7 +36,7 @@ server/db (Supabase)   server/engines (PURE, deterministic, no I/O)
 planned pace) · `goal_strategies` · `milestones` · `actions` (one-off) ·
 `routines` (the only recurrence; normal + minimum minutes) · `routine_steps` ·
 `tasks` (planned instances; status planned|done|done_minimum|skipped; **missed is
-derived**) · `activity_types` (polarity, quick-log) · `activities` (the event log;
+derived**; status only changes via SQL `set_task_status`, which also writes the evidence activity) · `activity_types` (polarity, quick-log) · `activities` (the event log;
 `local_date`, `local_hour`) · `daily_checkins` · `outcomes` (progress readings) ·
 `patterns` (derived; also loops; lifecycle + feedback + fingerprint) ·
 `experiments` (one metric, baseline vs result) · `reviews` (weekly snapshot).
@@ -60,8 +60,8 @@ Server Components for reads. Server Actions for mutations, returning
 
 ## Processing
 
-No job system. Routine tasks are materialized idempotently (today…+7) on page
-load. Pattern detection runs lazily when > 24 h old or stale (90-day window,
+No job system. Routine tasks are materialized idempotently (today−30…+7) on page
+load; resuming a routine restarts it today so paused days are never missed. Pattern detection runs lazily when > 24 h old or stale (90-day window,
 < 2 s). The weekly review is generated on first visit after the week ends
 (unique per week). An advisory lock stops double runs.
 

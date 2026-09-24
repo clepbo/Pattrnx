@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useActionState } from "react";
 
 import { sendMagicLink, signIn } from "../actions";
-import { Field, FormError, SubmitButton } from "./form-parts";
+import { Field, FormError, SubmitButton } from "@/components/form/fields";
 
 export function SignInForm({ next }: { next?: string }) {
   const [state, action] = useActionState(signIn, null);

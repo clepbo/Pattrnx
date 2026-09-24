@@ -356,7 +356,7 @@ iteration, **P2** = post-MVP.
 | FR-1 | The system stores every user-owned record with an owner and enforces per-user isolation at the database layer. |
 | FR-2 | The system derives `local_date` for every activity, task, check-in and outcome from the user's timezone at write time. |
 | FR-3 | The system generates routine tasks idempotently (at most one per routine per local date). |
-| FR-4 | Completing a task creates exactly one linked activity. Un-completing deletes it. |
+| FR-4 | Completing a task that has an activity type (all routine tasks, and actions that name one) creates exactly one linked activity. Un-completing or skipping deletes it. |
 | FR-5 | The system computes feasibility, progress and health deterministically from stored data. The same inputs always give the same outputs. |
 | FR-6 | The system runs pattern detection per user over a bounded window (default the last 90 days) and deduplicates by fingerprint. |
 | FR-7 | Every pattern shown to a user carries confidence, summary, and evidence the user can open. |

@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 
 import { requestPasswordReset, updatePassword } from "../actions";
-import { Field, FormError, SubmitButton } from "./form-parts";
+import { Field, FormError, SubmitButton } from "@/components/form/fields";
 
 export function ForgotPasswordForm() {
   const [state, action] = useActionState(requestPasswordReset, null);

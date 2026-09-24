@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 
 import { signUp } from "../actions";
-import { Field, FormError, SubmitButton } from "./form-parts";
+import { Field, FormError, SubmitButton } from "@/components/form/fields";
 
 function detectTimeZone(input: HTMLInputElement | null) {
   // Set on the client only, so server and client HTML match.
