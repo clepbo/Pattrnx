@@ -1,0 +1,19 @@
+export const DEFAULT_AFTER_LOGIN = "/today";
+
+/**
+ * Restricts post-auth redirects to same-origin relative paths so a crafted
+ * `?next=` can't send users to another site (open redirect).
+ */
+export function safeNextPath(next: unknown, fallback: string = DEFAULT_AFTER_LOGIN): string {
+  if (typeof next !== "string" || next.length === 0 || next.length > 512) return fallback;
+  if (!next.startsWith("/") || next.startsWith("//") || next.startsWith("/\\")) return fallback;
+  // Reject control characters and backslashes, which browsers may normalize into "//".
+  if (/[\u0000-\u001f\u007f\\]/.test(next)) return fallback;
+  try {
+    const url = new URL(next, "http://localhost");
+    if (url.origin !== "http://localhost") return fallback;
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return fallback;
+  }
+}
