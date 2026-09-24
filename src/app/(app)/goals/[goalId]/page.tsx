@@ -6,6 +6,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { deleteGoal, setGoalStatus } from "@/features/goals/actions";
 import { FeasibilityCard } from "@/features/goals/components/feasibility-card";
+import { HealthCard } from "@/features/goals/components/health-card";
 import {
   AddActionForm,
   AddMilestoneForm,
@@ -57,7 +58,7 @@ export default async function GoalPage({ params, searchParams }: PageProps<"/goa
   const [detail, activityTypes] = await Promise.all([getGoal(user, goalId), listActivityTypes(user)]);
   if (!detail) notFound();
 
-  const { goal, strategies, milestones, actions, outcomes, routines, feasibility, today } = detail;
+  const { goal, strategies, milestones, actions, outcomes, routines, feasibility, health, weeks, today } = detail;
   const numeric = goal.measurement_type !== "milestone";
   const input = toGoalInput(goal, outcomes, milestones);
   const current = currentValue(input);
@@ -128,7 +129,12 @@ export default async function GoalPage({ params, searchParams }: PageProps<"/goa
         {goal.motivation && <p className="text-sm italic">“{goal.motivation}”</p>}
       </div>
 
-      {goal.status === "active" && <FeasibilityCard copy={copy} />}
+      {goal.status === "active" && (
+        <>
+          <HealthCard health={health} weeks={weeks} />
+          <FeasibilityCard copy={copy} />
+        </>
+      )}
 
       <Section title="Progress" id="progress-heading">
         {progress !== null && (

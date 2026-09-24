@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { CheckinForm } from "@/features/activities/components/checkin-form";
 import { QuickLog } from "@/features/activities/components/quick-log";
+import { HEALTH_LABELS } from "@/features/goals/health-copy";
 import { AddTaskForm } from "@/features/today/components/add-task-form";
 import { TaskItem, type TaskView } from "@/features/today/components/task-item";
 import { assertLocalDate, localHourOf } from "@/lib/dates";
@@ -139,6 +141,24 @@ export default async function TodayPage() {
           }}
         />
       </section>
+
+      {goals.length > 0 && (
+        <section aria-labelledby="goals-heading" className="grid gap-3">
+          <h2 id="goals-heading" className="text-lg font-medium">
+            Active goals
+          </h2>
+          <ul className="grid gap-2">
+            {goals.map(({ goal, health }) => (
+              <li key={goal.id}>
+                <Link href={`/goals/${goal.id}`} className="border-border hover:bg-muted flex items-center justify-between gap-2 rounded-lg border px-3 py-2">
+                  <span className="text-sm">{goal.title}</span>
+                  <StatusBadge tone={HEALTH_LABELS[health.state].tone}>{HEALTH_LABELS[health.state].label}</StatusBadge>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {plan.recent.length > 0 && (
         <section aria-labelledby="recent-heading" className="grid gap-4">

@@ -4,10 +4,11 @@ import type { User } from "@supabase/supabase-js";
 
 import type { CreateGoalInput, UpdateGoalInput } from "@/features/goals/schemas";
 import { type ActionResult, fail, ok } from "@/lib/action-result";
-import { assertLocalDate, type LocalDate, todayIn } from "@/lib/dates";
+import { addDays, assertLocalDate, type LocalDate, todayIn, type Weekday } from "@/lib/dates";
 import type { Enums, Tables } from "@/server/db/database";
 import { createClient } from "@/server/db/server";
 import { assessFeasibility, type FeasibilityResult } from "@/server/engines/feasibility";
+import { assessHealth, type HealthResult, HEALTH_THRESHOLDS, planVsReality, type WeekCount } from "@/server/engines/progress/health";
 import type { GoalInput } from "@/types/engine";
 
 import { fromDbError } from "./errors";
@@ -22,6 +23,7 @@ export type GoalStatus = Enums<"goal_status">;
 export interface GoalSummary {
   goal: Goal & { life_area: { name: string } | null };
   feasibility: FeasibilityResult;
+  health: HealthResult;
 }
 
 export interface GoalDetail extends GoalSummary {
@@ -31,6 +33,29 @@ export interface GoalDetail extends GoalSummary {
   outcomes: Outcome[];
   routines: Pick<Tables<"routines">, "id" | "name" | "days_of_week" | "normal_minutes">[];
   today: LocalDate;
+  weeks: WeekCount[];
+}
+
+type TaskStatusRow = Pick<Tables<"tasks">, "scheduled_date" | "status">;
+
+/** Tasks and evidence dates window used for health (the execution window plus the stalled look-back). */
+const HEALTH_LOOKBACK_DAYS = Math.max(HEALTH_THRESHOLDS.executionWindowDays, HEALTH_THRESHOLDS.stalledDays, 35);
+
+function healthFor(
+  goal: Goal,
+  feasibility: FeasibilityResult,
+  today: LocalDate,
+  tasks: TaskStatusRow[],
+  evidenceDates: string[],
+): HealthResult {
+  const lastEvidence = evidenceDates.reduce<string | null>((max, date) => (max === null || date > max ? date : max), null);
+  return assessHealth({
+    today,
+    startDate: assertLocalDate(goal.start_date),
+    feasibility,
+    tasks: tasks.map((t) => ({ scheduledDate: assertLocalDate(t.scheduled_date), status: t.status })),
+    lastEvidenceDate: lastEvidence ? assertLocalDate(lastEvidence) : null,
+  });
 }
 
 /** DB rows → the engine's input shape (ARCHITECTURE.md §8). */
@@ -56,21 +81,37 @@ async function userToday(user: User): Promise<LocalDate> {
   return todayIn((await getProfile(user)).timezone);
 }
 
+async function recentActivityDates(goalIds: string[], from: LocalDate): Promise<Map<string, string[]>> {
+  const byGoal = new Map<string, string[]>();
+  if (goalIds.length === 0) return byGoal;
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("activities").select("goal_id, local_date").in("goal_id", goalIds).gte("local_date", from);
+  if (error) throw new Error(`goal activity lookup failed: ${error.code}`);
+  for (const row of data) {
+    if (row.goal_id) byGoal.set(row.goal_id, [...(byGoal.get(row.goal_id) ?? []), row.local_date]);
+  }
+  return byGoal;
+}
+
 export async function listGoals(user: User, { statuses }: { statuses?: GoalStatus[] } = {}): Promise<GoalSummary[]> {
   const supabase = await createClient();
+  const today = await userToday(user);
+  const from = addDays(today, -HEALTH_LOOKBACK_DAYS);
   let query = supabase
     .from("goals")
-    .select("*, life_area:life_areas(name), outcomes(local_date, value), milestones(status)")
-    .eq("user_id", user.id);
+    .select("*, life_area:life_areas(name), outcomes(local_date, value), milestones(status), tasks(scheduled_date, status)")
+    .eq("user_id", user.id)
+    .gte("tasks.scheduled_date", from);
   if (statuses) query = query.in("status", statuses);
   const { data, error } = await query.order("priority").order("created_at");
   if (error) throw new Error(`goals lookup failed: ${error.code}`);
 
-  const today = await userToday(user);
-  return data.map(({ outcomes, milestones, ...goal }) => ({
-    goal,
-    feasibility: assessFeasibility(toGoalInput(goal, outcomes, milestones), today),
-  }));
+  const activityDates = await recentActivityDates(data.map((g) => g.id), from);
+  return data.map(({ outcomes, milestones, tasks, ...goal }) => {
+    const feasibility = assessFeasibility(toGoalInput(goal, outcomes, milestones), today);
+    const evidence = [...outcomes.map((o) => o.local_date), ...(activityDates.get(goal.id) ?? [])];
+    return { goal, feasibility, health: healthFor(goal, feasibility, today, tasks, evidence) };
+  });
 }
 
 export async function getGoal(user: User, id: string): Promise<GoalDetail | null> {
@@ -94,7 +135,17 @@ export async function getGoal(user: User, id: string): Promise<GoalDetail | null
   if (!data) return null;
 
   const { strategies, milestones, actions, outcomes, routines, ...goal } = data;
-  const today = await userToday(user);
+  const profile = await getProfile(user);
+  const today = todayIn(profile.timezone);
+  const from = addDays(today, -HEALTH_LOOKBACK_DAYS);
+  const { data: tasks, error: taskError } = await supabase
+    .from("tasks")
+    .select("scheduled_date, status")
+    .eq("goal_id", goal.id)
+    .gte("scheduled_date", from);
+  if (taskError) throw new Error(`goal tasks lookup failed: ${taskError.code}`);
+  const activityDates = (await recentActivityDates([goal.id], from)).get(goal.id) ?? [];
+  const feasibility = assessFeasibility(toGoalInput(goal, outcomes, milestones), today);
   const bySort = <T extends { sort_order: number; created_at: string }>(a: T, b: T) =>
     a.sort_order - b.sort_order || a.created_at.localeCompare(b.created_at);
 
@@ -107,7 +158,13 @@ export async function getGoal(user: User, id: string): Promise<GoalDetail | null
     actions: [...actions].sort(bySort).map(({ task, ...action }) => ({ ...action, task: task[0] ?? null })),
     outcomes: [...outcomes].sort((a, b) => b.occurred_at.localeCompare(a.occurred_at)),
     routines: routines.filter((r) => r.archived_at === null),
-    feasibility: assessFeasibility(toGoalInput(goal, outcomes, milestones), today),
+    feasibility,
+    health: healthFor(goal, feasibility, today, tasks, [...outcomes.map((o) => o.local_date), ...activityDates]),
+    weeks: planVsReality(
+      tasks.map((t) => ({ scheduledDate: assertLocalDate(t.scheduled_date), status: t.status })),
+      today,
+      profile.week_starts_on as Weekday,
+    ),
   };
 }
 
