@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   addDays,
+  addMonths,
   assertLocalDate,
   diffDays,
   eachDay,
   isValidTimeZone,
   localDateOf,
   localHourOf,
+  monthsBetween,
   normalizeTimeZone,
   parseLocalDate,
   startOfWeek,
@@ -142,5 +144,29 @@ describe("calendar arithmetic", () => {
       "2026-10-02",
     ]);
     expect(eachDay(d("2026-09-21"), d("2026-09-20"))).toEqual([]);
+  });
+});
+
+describe("month arithmetic", () => {
+  it("addMonths clamps to the end of shorter months", () => {
+    expect(addMonths(d("2026-01-31"), 1)).toBe("2026-02-28");
+    expect(addMonths(d("2028-01-31"), 1)).toBe("2028-02-29");
+    expect(addMonths(d("2026-09-15"), 6)).toBe("2027-03-15");
+    expect(addMonths(d("2026-03-15"), -3)).toBe("2025-12-15");
+  });
+
+  it("monthsBetween counts whole calendar months exactly", () => {
+    expect(monthsBetween(d("2026-09-01"), d("2027-03-01"))).toBe(6);
+    expect(monthsBetween(d("2026-09-24"), d("2026-09-24"))).toBe(0);
+  });
+
+  it("monthsBetween adds the partial month as a fraction", () => {
+    // Sep 1 → Sep 16 is 15 of September's 30 days.
+    expect(monthsBetween(d("2026-09-01"), d("2026-09-16"))).toBeCloseTo(0.5);
+    expect(monthsBetween(d("2026-01-31"), d("2026-02-28"))).toBe(1);
+  });
+
+  it("monthsBetween is negative for reversed ranges", () => {
+    expect(monthsBetween(d("2027-03-01"), d("2026-09-01"))).toBe(-6);
   });
 });

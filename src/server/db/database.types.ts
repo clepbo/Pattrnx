@@ -34,12 +34,80 @@ export type Database = {
   }
   public: {
     Tables: {
+      actions: {
+        Row: {
+          activity_type_id: string | null
+          completed_at: string | null
+          created_at: string
+          estimated_minutes: number | null
+          goal_id: string
+          id: string
+          milestone_id: string | null
+          sort_order: number
+          status: Database["public"]["Enums"]["action_status"]
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          activity_type_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          estimated_minutes?: number | null
+          goal_id: string
+          id?: string
+          milestone_id?: string | null
+          sort_order?: number
+          status?: Database["public"]["Enums"]["action_status"]
+          title: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          activity_type_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          estimated_minutes?: number | null
+          goal_id?: string
+          id?: string
+          milestone_id?: string | null
+          sort_order?: number
+          status?: Database["public"]["Enums"]["action_status"]
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "actions_activity_type_fkey"
+            columns: ["activity_type_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "activity_types"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "actions_goal_fkey"
+            columns: ["goal_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "actions_milestone_fkey"
+            columns: ["milestone_id", "goal_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "milestones"
+            referencedColumns: ["id", "goal_id", "user_id"]
+          },
+        ]
+      }
       activities: {
         Row: {
           activity_type_id: string
           created_at: string
           duration_minutes: number | null
           energy_level: number | null
+          goal_id: string | null
           id: string
           life_area_id: string
           local_date: string
@@ -50,6 +118,7 @@ export type Database = {
           quantity: number | null
           source: Database["public"]["Enums"]["activity_source"]
           tags: string[]
+          task_id: string | null
           unit: string | null
           updated_at: string
           user_id: string
@@ -59,6 +128,7 @@ export type Database = {
           created_at?: string
           duration_minutes?: number | null
           energy_level?: number | null
+          goal_id?: string | null
           id?: string
           life_area_id: string
           local_date: string
@@ -69,6 +139,7 @@ export type Database = {
           quantity?: number | null
           source?: Database["public"]["Enums"]["activity_source"]
           tags?: string[]
+          task_id?: string | null
           unit?: string | null
           updated_at?: string
           user_id?: string
@@ -78,6 +149,7 @@ export type Database = {
           created_at?: string
           duration_minutes?: number | null
           energy_level?: number | null
+          goal_id?: string | null
           id?: string
           life_area_id?: string
           local_date?: string
@@ -88,6 +160,7 @@ export type Database = {
           quantity?: number | null
           source?: Database["public"]["Enums"]["activity_source"]
           tags?: string[]
+          task_id?: string | null
           unit?: string | null
           updated_at?: string
           user_id?: string
@@ -101,10 +174,24 @@ export type Database = {
             referencedColumns: ["id", "user_id"]
           },
           {
+            foreignKeyName: "activities_goal_fkey"
+            columns: ["goal_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
             foreignKeyName: "activities_life_area_fkey"
             columns: ["life_area_id", "user_id"]
             isOneToOne: false
             referencedRelation: "life_areas"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "activities_task_fkey"
+            columns: ["task_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
             referencedColumns: ["id", "user_id"]
           },
         ]
@@ -201,6 +288,131 @@ export type Database = {
         }
         Relationships: []
       }
+      goal_strategies: {
+        Row: {
+          created_at: string
+          description: string
+          goal_id: string
+          id: string
+          sort_order: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          goal_id: string
+          id?: string
+          sort_order?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          goal_id?: string
+          id?: string
+          sort_order?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goal_strategies_goal_fkey"
+            columns: ["goal_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
+      goals: {
+        Row: {
+          baseline_value: number | null
+          created_at: string
+          current_state_text: string | null
+          deadline: string | null
+          description: string | null
+          id: string
+          life_area_id: string
+          measurement_type: Database["public"]["Enums"]["measurement_type"]
+          motivation: string | null
+          planned_pace_amount: number | null
+          planned_pace_period: Database["public"]["Enums"]["pace_period"] | null
+          priority: number
+          self_confidence: number | null
+          start_date: string
+          status: Database["public"]["Enums"]["goal_status"]
+          status_changed_at: string
+          target_state_text: string | null
+          target_value: number | null
+          title: string
+          unit: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          baseline_value?: number | null
+          created_at?: string
+          current_state_text?: string | null
+          deadline?: string | null
+          description?: string | null
+          id?: string
+          life_area_id: string
+          measurement_type: Database["public"]["Enums"]["measurement_type"]
+          motivation?: string | null
+          planned_pace_amount?: number | null
+          planned_pace_period?:
+            | Database["public"]["Enums"]["pace_period"]
+            | null
+          priority?: number
+          self_confidence?: number | null
+          start_date: string
+          status?: Database["public"]["Enums"]["goal_status"]
+          status_changed_at?: string
+          target_state_text?: string | null
+          target_value?: number | null
+          title: string
+          unit?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          baseline_value?: number | null
+          created_at?: string
+          current_state_text?: string | null
+          deadline?: string | null
+          description?: string | null
+          id?: string
+          life_area_id?: string
+          measurement_type?: Database["public"]["Enums"]["measurement_type"]
+          motivation?: string | null
+          planned_pace_amount?: number | null
+          planned_pace_period?:
+            | Database["public"]["Enums"]["pace_period"]
+            | null
+          priority?: number
+          self_confidence?: number | null
+          start_date?: string
+          status?: Database["public"]["Enums"]["goal_status"]
+          status_changed_at?: string
+          target_state_text?: string | null
+          target_value?: number | null
+          title?: string
+          unit?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goals_life_area_fkey"
+            columns: ["life_area_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "life_areas"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
       life_areas: {
         Row: {
           archived_at: string | null
@@ -233,6 +445,113 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      milestones: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          goal_id: string
+          id: string
+          sort_order: number
+          status: Database["public"]["Enums"]["milestone_status"]
+          target_date: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          goal_id: string
+          id?: string
+          sort_order?: number
+          status?: Database["public"]["Enums"]["milestone_status"]
+          target_date?: string | null
+          title: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          goal_id?: string
+          id?: string
+          sort_order?: number
+          status?: Database["public"]["Enums"]["milestone_status"]
+          target_date?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "milestones_goal_fkey"
+            columns: ["goal_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
+      outcomes: {
+        Row: {
+          activity_id: string | null
+          created_at: string
+          description: string | null
+          goal_id: string
+          id: string
+          local_date: string
+          occurred_at: string
+          updated_at: string
+          user_id: string
+          valence: Database["public"]["Enums"]["outcome_valence"]
+          value: number | null
+        }
+        Insert: {
+          activity_id?: string | null
+          created_at?: string
+          description?: string | null
+          goal_id: string
+          id?: string
+          local_date: string
+          occurred_at?: string
+          updated_at?: string
+          user_id?: string
+          valence?: Database["public"]["Enums"]["outcome_valence"]
+          value?: number | null
+        }
+        Update: {
+          activity_id?: string | null
+          created_at?: string
+          description?: string | null
+          goal_id?: string
+          id?: string
+          local_date?: string
+          occurred_at?: string
+          updated_at?: string
+          user_id?: string
+          valence?: Database["public"]["Enums"]["outcome_valence"]
+          value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outcomes_activity_fkey"
+            columns: ["activity_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "activities"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "outcomes_goal_fkey"
+            columns: ["goal_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -270,17 +589,252 @@ export type Database = {
         }
         Relationships: []
       }
+      routine_steps: {
+        Row: {
+          created_at: string
+          id: string
+          minutes: number | null
+          routine_id: string
+          sort_order: number
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          minutes?: number | null
+          routine_id: string
+          sort_order?: number
+          title: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          minutes?: number | null
+          routine_id?: string
+          sort_order?: number
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "routine_steps_routine_fkey"
+            columns: ["routine_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "routines"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
+      routines: {
+        Row: {
+          active_from: string
+          activity_type_id: string
+          archived_at: string | null
+          created_at: string
+          days_of_week: number[]
+          fallback_description: string | null
+          goal_id: string | null
+          id: string
+          minimum_minutes: number | null
+          name: string
+          normal_minutes: number
+          paused_at: string | null
+          preferred_time: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active_from: string
+          activity_type_id: string
+          archived_at?: string | null
+          created_at?: string
+          days_of_week: number[]
+          fallback_description?: string | null
+          goal_id?: string | null
+          id?: string
+          minimum_minutes?: number | null
+          name: string
+          normal_minutes: number
+          paused_at?: string | null
+          preferred_time?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          active_from?: string
+          activity_type_id?: string
+          archived_at?: string | null
+          created_at?: string
+          days_of_week?: number[]
+          fallback_description?: string | null
+          goal_id?: string | null
+          id?: string
+          minimum_minutes?: number | null
+          name?: string
+          normal_minutes?: number
+          paused_at?: string | null
+          preferred_time?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "routines_activity_type_fkey"
+            columns: ["activity_type_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "activity_types"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "routines_goal_fkey"
+            columns: ["goal_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
+      tasks: {
+        Row: {
+          action_id: string | null
+          activity_type_id: string | null
+          completed_at: string | null
+          created_at: string
+          goal_id: string | null
+          id: string
+          minimum_minutes: number | null
+          planned_minutes: number | null
+          routine_id: string | null
+          scheduled_date: string
+          scheduled_time: string | null
+          source: Database["public"]["Enums"]["task_source"]
+          status: Database["public"]["Enums"]["task_status"]
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          action_id?: string | null
+          activity_type_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          goal_id?: string | null
+          id?: string
+          minimum_minutes?: number | null
+          planned_minutes?: number | null
+          routine_id?: string | null
+          scheduled_date: string
+          scheduled_time?: string | null
+          source: Database["public"]["Enums"]["task_source"]
+          status?: Database["public"]["Enums"]["task_status"]
+          title: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          action_id?: string | null
+          activity_type_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          goal_id?: string | null
+          id?: string
+          minimum_minutes?: number | null
+          planned_minutes?: number | null
+          routine_id?: string | null
+          scheduled_date?: string
+          scheduled_time?: string | null
+          source?: Database["public"]["Enums"]["task_source"]
+          status?: Database["public"]["Enums"]["task_status"]
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_action_fkey"
+            columns: ["action_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "actions"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "tasks_activity_type_fkey"
+            columns: ["activity_type_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "activity_types"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "tasks_goal_fkey"
+            columns: ["goal_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "tasks_routine_fkey"
+            columns: ["routine_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "routines"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      are_valid_days_of_week: { Args: { days: number[] }; Returns: boolean }
       are_valid_tags: { Args: { tags: string[] }; Returns: boolean }
       is_valid_timezone: { Args: { tz: string }; Returns: boolean }
+      set_task_status: {
+        Args: {
+          p_status: Database["public"]["Enums"]["task_status"]
+          p_task_id: string
+        }
+        Returns: {
+          action_id: string | null
+          activity_type_id: string | null
+          completed_at: string | null
+          created_at: string
+          goal_id: string | null
+          id: string
+          minimum_minutes: number | null
+          planned_minutes: number | null
+          routine_id: string | null
+          scheduled_date: string
+          scheduled_time: string | null
+          source: Database["public"]["Enums"]["task_source"]
+          status: Database["public"]["Enums"]["task_status"]
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tasks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
+      action_status: "open" | "done" | "dropped"
       activity_polarity: "desired" | "undesired" | "neutral"
       activity_source: "manual" | "task" | "import"
+      goal_status: "draft" | "active" | "paused" | "completed" | "abandoned"
+      measurement_type: "cumulative" | "level" | "milestone"
+      milestone_status: "pending" | "in_progress" | "done" | "dropped"
+      outcome_valence: "positive" | "negative" | "neutral" | "unknown"
+      pace_period: "day" | "week" | "month"
+      task_source: "manual" | "action" | "routine"
+      task_status: "planned" | "done" | "done_minimum" | "skipped"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -411,8 +965,16 @@ export const Constants = {
   },
   public: {
     Enums: {
+      action_status: ["open", "done", "dropped"],
       activity_polarity: ["desired", "undesired", "neutral"],
       activity_source: ["manual", "task", "import"],
+      goal_status: ["draft", "active", "paused", "completed", "abandoned"],
+      measurement_type: ["cumulative", "level", "milestone"],
+      milestone_status: ["pending", "in_progress", "done", "dropped"],
+      outcome_valence: ["positive", "negative", "neutral", "unknown"],
+      pace_period: ["day", "week", "month"],
+      task_source: ["manual", "action", "routine"],
+      task_status: ["planned", "done", "done_minimum", "skipped"],
     },
   },
 } as const
