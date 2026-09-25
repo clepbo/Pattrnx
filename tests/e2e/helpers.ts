@@ -30,7 +30,7 @@ export async function signInNewUser(page: Page, { onboarded = false, timezone = 
 
   await page.goto("/login");
   await page.getByLabel("Email").first().fill(email);
-  await page.getByLabel("Password").fill(TEST_PASSWORD);
+  await page.getByLabel("Password", { exact: true }).fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page).toHaveURL(onboarded ? /\/today$/ : /\/onboarding$/);
   return { email, userId };

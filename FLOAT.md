@@ -35,6 +35,8 @@ The hosted projects don't exist yet. The user creates them by following
 - One Supabase project for the whole testing phase (user's choice); previews share
   it. `deploy-db.yml` targets `production` only and validates the secrets' format.
   Apply migrations before merging code that needs them.
+- Table grants are explicit (hosted Supabase dropped default grants in 2026;
+  SR-12). Every new table needs its own grants; `grants.test.sql` enforces it.
 - Experiments stay `active` past their end date until the user confirms.
 - Reviews are generated lazily (no cron). `/api/cron/weekly` is still unbuilt, so
   `CRON_SECRET` isn't needed yet.

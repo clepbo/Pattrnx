@@ -168,6 +168,10 @@ app / features  →  services  →  engines (pure)
 1. **Every user-owned row has `user_id uuid not null references auth.users on
    delete cascade`.** RLS policy on every table: `user_id = auth.uid()` for
    select/insert/update/delete. Deleting the auth user deletes everything (F15).
+   Table privileges are explicit per table and role (no reliance on Supabase's
+   default grants, which hosted projects dropped in 2026): `authenticated` and
+   `service_role` get only the DML the app uses, `anon` gets nothing
+   (`20260928090000_explicit_grants.sql`, checked by `grants.test.sql`).
 2. **Source vs derived.** Source tables (goals, routines, tasks, activities,
    check-ins, outcomes, experiments' user inputs) are the truth. Derived tables
    (`patterns`, `reviews`) can always be recomputed and may be deleted freely.

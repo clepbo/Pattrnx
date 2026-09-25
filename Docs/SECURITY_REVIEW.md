@@ -106,6 +106,7 @@ must be configured when the hosted project is created.
 - **SR-9: CSP allows `style-src 'unsafe-inline'`.** A documented trade-off: React renders SSR `style` attributes. Scripts are nonce-restricted with `strict-dynamic`.
 - **SR-10: export doesn't require a recent sign-in.** Accepted: someone holding a session can already read all the same data in the UI. SR-3 and the rate limit bound automated abuse.
 - **SR-11 (fixed): `shadcn` moved from dependencies to devDependencies.** It's only needed at build time for CSS.
+- **SR-12 (fixed 2026-09-25): tables relied on Supabase's default grants.** Found on the first hosted deploy. New hosted projects no longer grant table access by default, so every table except `profiles` was unreachable (a total outage, not an exposure: access failed closed). Privileges are now explicit and least-privilege (no TRUNCATE/REFERENCES/TRIGGER), and a pgTAP test fails on any table left on defaults. Verified by running the integration and e2e suites with default grants revoked.
 
 ---
 

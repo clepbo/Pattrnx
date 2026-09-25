@@ -32,6 +32,18 @@ test.describe("signed-out visitors", () => {
     expect(first.headers()["x-powered-by"]).toBeUndefined();
   });
 
+  test("can show and hide the password they typed", async ({ page }) => {
+    await page.goto("/signup");
+    const password = page.getByLabel("Password", { exact: true });
+    await password.fill("typed-secret-123");
+    await expect(password).toHaveAttribute("type", "password");
+    await page.getByRole("button", { name: "Show password" }).click();
+    await expect(password).toHaveAttribute("type", "text");
+    await expect(password).toHaveValue("typed-secret-123");
+    await page.getByRole("button", { name: "Hide password" }).click();
+    await expect(password).toHaveAttribute("type", "password");
+  });
+
   for (const path of ["/", "/login", "/signup", "/forgot-password"]) {
     test(`${path} has no serious accessibility violations`, async ({ page }) => {
       await page.goto(path);
@@ -49,12 +61,12 @@ test("sign up → confirm email → today → sign out → sign in", async ({ pa
   await page.goto("/signup");
   await page.getByLabel("Your name").fill(name);
   await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill("short");
+  await page.getByLabel("Password", { exact: true }).fill("short");
   await page.getByRole("button", { name: "Create account" }).click();
   await expect(page.getByText("Use at least 10 characters.")).toBeVisible();
   await expect(page.getByLabel("Email"), "non-secret values survive a failed submit").toHaveValue(email);
 
-  await page.getByLabel("Password").fill(TEST_PASSWORD);
+  await page.getByLabel("Password", { exact: true }).fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
   await expect(page).toHaveURL(/\/check-email\?reason=signup$/);
 
@@ -75,11 +87,11 @@ test("sign up → confirm email → today → sign out → sign in", async ({ pa
   // An off-site `next` is ignored after sign-in.
   await page.goto("/login?next=https://evil.example/steal");
   await page.getByLabel("Email").first().fill(email);
-  await page.getByLabel("Password").fill("wrong-password-1");
+  await page.getByLabel("Password", { exact: true }).fill("wrong-password-1");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page.getByRole("alert").filter({ hasText: "Email or password is incorrect." })).toBeVisible();
 
-  await page.getByLabel("Password").fill(TEST_PASSWORD);
+  await page.getByLabel("Password", { exact: true }).fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   // `/today` sends users who haven't finished onboarding back to it.
   await expect(page).toHaveURL(/\/onboarding$/);
