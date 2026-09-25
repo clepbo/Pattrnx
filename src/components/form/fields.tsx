@@ -1,5 +1,7 @@
 "use client";
 
+import { Eye, EyeOff } from "lucide-react";
+import { useState } from "react";
 import { useFormStatus } from "react-dom";
 
 import { Button } from "@/components/ui/button";
@@ -47,6 +49,31 @@ export function Field({ name, label, state, hint, id = name, defaultValue, ...in
     <div className="grid gap-2">
       <Label htmlFor={id}>{label}</Label>
       <Input id={id} name={name} defaultValue={state?.values?.[name] ?? defaultValue} {...useFieldA11y(id, hint, errors)} {...inputProps} />
+      <FieldMessages id={id} hint={hint} errors={errors} />
+    </div>
+  );
+}
+
+/** Password input with a show/hide toggle, so people can check what they typed. */
+export function PasswordField({ name, label, state, hint, id = name, ...inputProps }: Common & Omit<React.ComponentProps<typeof Input>, "type">) {
+  const errors = fieldErrors(state, name);
+  const [visible, setVisible] = useState(false);
+  return (
+    <div className="grid gap-2">
+      <Label htmlFor={id}>{label}</Label>
+      <div className="relative">
+        {/* Passwords are never echoed back after a failed submit. */}
+        <Input id={id} name={name} type={visible ? "text" : "password"} className="pr-12" {...useFieldA11y(id, hint, errors)} {...inputProps} />
+        <button
+          type="button"
+          onClick={() => setVisible((v) => !v)}
+          aria-label={visible ? "Hide password" : "Show password"}
+          aria-controls={id}
+          className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-lg outline-none focus-visible:ring-3"
+        >
+          {visible ? <EyeOff className="size-5" aria-hidden /> : <Eye className="size-5" aria-hidden />}
+        </button>
+      </div>
       <FieldMessages id={id} hint={hint} errors={errors} />
     </div>
   );

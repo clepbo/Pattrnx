@@ -52,10 +52,14 @@ intent. Where it differs from `ARCHITECTURE.md`, follow `ARCHITECTURE.md` (see i
 - **Authorization is RLS.** Every new table ships in the same migration with
   `user_id uuid not null default auth.uid()` (FK → `auth.users on delete
   cascade`), RLS enabled, four `to authenticated` policies using
-  `(select auth.uid()) = user_id`, `revoke all … from anon`, a `unique (id,
-  user_id)` constraint, and cross-user pgTAP tests. References to other
-  user-owned rows use composite FKs `(x_id, user_id)`. Follow
-  `supabase/migrations/20260924120000_foundation.sql`.
+  `(select auth.uid()) = user_id`, explicit grants (`revoke all … from anon,
+  authenticated, service_role`, then `grant select, insert, update, delete … to
+  authenticated, service_role`), a `unique (id, user_id)` constraint, and
+  cross-user pgTAP tests. Hosted Supabase no longer grants table access by default,
+  but the local stack does; `grants.test.sql` fails if a table relies on the
+  defaults. References to other user-owned rows use composite FKs `(x_id, user_id)`.
+  Follow `supabase/migrations/20260924120000_foundation.sql` and
+  `20260928090000_explicit_grants.sql`.
 - **Service role** is only imported from `src/server/db/admin.ts`, and only by
   `/api/cron/*` and account deletion.
 - **Validate every input** with Zod in the action/handler. Never trust ids from the

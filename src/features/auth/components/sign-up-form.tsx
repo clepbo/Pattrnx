@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 
 import { signUp } from "../actions";
-import { Field, FormError, SubmitButton } from "@/components/form/fields";
+import { Field, FormError, PasswordField, SubmitButton } from "@/components/form/fields";
 
 function detectTimeZone(input: HTMLInputElement | null) {
   // Set on the client only, so server and client HTML match.
@@ -18,10 +18,9 @@ export function SignUpForm() {
       <FormError state={state} />
       <Field name="displayName" label="Your name" autoComplete="name" required maxLength={80} state={state} />
       <Field name="email" label="Email" type="email" autoComplete="email" required state={state} />
-      <Field
+      <PasswordField
         name="password"
         label="Password"
-        type="password"
         autoComplete="new-password"
         required
         minLength={10}

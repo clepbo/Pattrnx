@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useActionState } from "react";
 
 import { sendMagicLink, signIn } from "../actions";
-import { Field, FormError, SubmitButton } from "@/components/form/fields";
+import { Field, FormError, PasswordField, SubmitButton } from "@/components/form/fields";
 
 export function SignInForm({ next }: { next?: string }) {
   const [state, action] = useActionState(signIn, null);
@@ -13,7 +13,7 @@ export function SignInForm({ next }: { next?: string }) {
     <form action={action} className="grid gap-4" noValidate>
       <FormError state={state} />
       <Field name="email" label="Email" type="email" autoComplete="email" required state={state} />
-      <Field name="password" label="Password" type="password" autoComplete="current-password" required state={state} />
+      <PasswordField name="password" label="Password" autoComplete="current-password" required state={state} />
       <input type="hidden" name="next" value={next ?? ""} />
       <SubmitButton pendingLabel="Signing in…">Sign in</SubmitButton>
       <Link href="/forgot-password" className="text-muted-foreground justify-self-start text-sm underline-offset-4 hover:underline">
