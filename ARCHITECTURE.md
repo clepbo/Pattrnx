@@ -854,23 +854,23 @@ truth" requirement is tested.
 | Environment | App | Database | Purpose |
 |---|---|---|---|
 | local | `pnpm dev` | `supabase start` (Docker) | Development, integration tests |
-| preview | Vercel preview per PR | Supabase branch or shared staging project | Review |
+| preview | Vercel preview per PR | Production project while testing; a staging project before real users | Review |
 | staging | Vercel `staging` branch | Supabase staging project | Pre-release, e2e nightly |
 | production | Vercel `main` | Supabase production project, London | Users |
 
 Regions (ADR 0001): Supabase `eu-west-2` (London), Vercel functions `lhr1` via
 `vercel.json`. Setup steps and the smoke test are in `Docs/DEPLOYMENT.md`. Until a
-staging branch is needed, previews use the staging project.
+staging project is added, previews use the production project (testing phase).
 
 CI (`.github/workflows/ci.yml`) on every PR, in two parallel jobs:
 (1) typecheck → lint → unit tests (under `TZ=America/Los_Angeles`, to catch
 server-timezone bugs) → `pnpm audit`; (2) start local Supabase (migrations + seed)
 → `db lint` → pgTAP → generated-types drift check → integration → build →
 Playwright.
-Migrations are applied to staging, then production, with `supabase db push` via the
-manual `deploy-db.yml` workflow (GitHub environments; production needs a reviewer's
-approval; never seeds). Apply them before merging the code that needs them. Migrations are forward-only. Destructive
-changes follow expand → migrate → contract.
+Migrations are applied with `supabase db push` via the manual `deploy-db.yml`
+workflow (`production` GitHub environment, optional reviewer approval; never
+seeds). Apply them before merging the code that needs them. Migrations are
+forward-only. Destructive changes follow expand → migrate → contract.
 
 Backups: Supabase daily backups, plus PITR before public launch.
 

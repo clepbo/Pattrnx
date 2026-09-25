@@ -12,7 +12,6 @@ search the dashboard for the setting name.
 | Service | What | Plan | Region |
 |---|---|---|---|
 | Supabase | `pattrnx-production` project | Pro (daily backups, no pausing) | London (`eu-west-2`) |
-| Supabase | `pattrnx-staging` project (previews) | Free is fine | London (`eu-west-2`) |
 | Vercel | One project linked to `clepbo/Pattrnx` | Pro (Hobby is non-commercial only) | Functions in London (`lhr1`, set by `vercel.json`) |
 | Sentry | One Next.js project | Free (Developer) is enough for the beta | Choose EU data storage when creating the organization |
 | Email | Resend or Postmark, sending from your domain | Free tier covers a closed beta | Any |
@@ -31,7 +30,7 @@ Where this section differs from the steps below, follow this section.
 |---|---|---|
 | App URL | Vercel's default `https://<project>.vercel.app` (see *Settings → Domains* for the exact name) | Your own domain |
 | Auth emails | Gmail SMTP from your personal Gmail (below) | An email provider sending from your domain |
-| Supabase | Just `pattrnx-production` on the Free plan; previews use it too | Pro plan, plus a separate staging project for previews |
+| Supabase | Just `pattrnx-production` on the Free plan; previews use it too | Pro plan (a separate staging project for previews is optional) |
 | Vercel | Hobby is fine for testing on your own | Pro (Hobby's terms are non-commercial only) |
 | Service accounts | Signed up with your personal Gmail | Invite a business address and make it an owner |
 
@@ -63,12 +62,12 @@ Things to know: every tester sees your personal address as the sender and can re
 to it, and some emails may land in spam. If the app password leaks, revoke it in
 your Google Account; your Gmail password is unaffected.
 
-With a single Supabase project, the migration workflow (step 2) needs only the
-`production` GitHub environment; skip `staging`.
+The migration workflow (step 2) only targets `production`.
 
 ## 1. Supabase projects
 
-Do this twice: `pattrnx-staging` first, then `pattrnx-production`.
+One project, `pattrnx-production`, used by both the live site and pull-request
+previews.
 
 1. **New project** → region **West EU (London)**. Generate a strong database
    password and store it in your password manager (it's needed in step 2).
@@ -96,33 +95,49 @@ Do this twice: `pattrnx-staging` first, then `pattrnx-production`.
    is heavily rate-limited and not meant for real users. Verify the sending domain
    (SPF/DKIM) in the provider first.
 7. **Authentication → URL Configuration:**
-   - Production: Site URL `https://your-domain`. Redirect URLs `https://your-domain/**`.
-   - Staging: Site URL = the URL you'll test email flows on (a staging domain, or
-     your Vercel preview domain). Redirect URLs `https://*-<vercel-team>.vercel.app/**`.
-     Emails sent from staging always link to the Site URL. On other previews, sign
-     in with a password.
+   - Site URL `https://your-domain` (while testing: your `vercel.app` URL).
+   - Redirect URLs: `https://your-domain/**`, plus
+     `https://*-<vercel-team>.vercel.app/**` so previews work too.
+   - Emails always link to the Site URL. On a preview, sign in with a password.
 8. **Organization → Security:** require MFA for everyone with dashboard access.
 
 ## 2. Apply the database schema
 
 Migrations go through the manual **Deploy database migrations** GitHub workflow
-(`.github/workflows/deploy-db.yml`). It never loads the demo seed.
+(`.github/workflows/deploy-db.yml`). It targets the `production` project only and
+never loads the demo seed.
 
-1. Create a Supabase **access token** (*Account → Access Tokens*).
-2. In GitHub, go to *Settings → Environments* and create `staging` and `production`.
-   On `production`, add yourself as a **required reviewer**. Add these secrets to
-   each environment:
+### Where each secret comes from
 
-   | Secret | Value |
-   |---|---|
-   | `SUPABASE_ACCESS_TOKEN` | The token from step 1 |
-   | `SUPABASE_PROJECT_REF` | That environment's project ref |
-   | `SUPABASE_DB_PASSWORD` | That environment's database password |
+| Secret | Where to get it | Looks like |
+|---|---|---|
+| `SUPABASE_ACCESS_TOKEN` | A **personal access token**, not a project API key. Supabase dashboard → your avatar (top right) → **Account preferences** → **Access Tokens** (direct link: `https://supabase.com/dashboard/account/tokens`) → **Generate new token**, name it "GitHub migrations", copy it (shown once). | Starts with `sbp_` |
+| `SUPABASE_PROJECT_REF` | Open your project → **Project Settings** → **General** → **Project ID**. It's also the part before `.supabase.co` in the project URL, and after `/project/` in the dashboard address bar. | ~20 lowercase letters, e.g. `abcdefghijklmnopqrst` |
+| `SUPABASE_DB_PASSWORD` | The database password you chose when creating the project. If you've lost it: **Project Settings** → **Database** → **Reset database password**. | Whatever you set |
 
-3. Open *Actions → Deploy database migrations → Run workflow*. Pick `staging` and leave
-   *dry run* ticked: the log lists the migrations it would apply. Run it again with
-   *dry run* unticked. Then do the same for `production` (it waits for your approval).
-4. Check: in the Supabase *Table Editor*, every table shows **RLS enabled**.
+Common mistakes: using the `anon`, `publishable`, `service_role` or `secret` key as
+the access token; pasting the full project URL instead of the ID; or copying a
+trailing space or line break. The workflow's first step checks for these and says
+which value is wrong.
+
+### Steps
+
+1. In GitHub: repo **Settings** → **Environments** → **New environment** → name it
+   exactly `production`. Optionally add yourself as a **required reviewer**, so each
+   run waits for your approval.
+2. In that environment, under **Environment secrets** → **Add environment secret**,
+   add the three secrets above. Use the names exactly as written. Put them in the
+   environment, not in *Secrets and variables → Actions*.
+3. **Actions** → **Deploy database migrations** → **Run workflow** (branch `main`),
+   with *dry run* ticked. The log lists the migrations it would apply.
+4. Run it again with *dry run* unticked.
+5. Check: in Supabase's **Table Editor**, the tables exist and each shows **RLS
+   enabled**.
+
+GitHub never shows secret values again after saving, masks them in the logs (which
+are public on a public repo), and doesn't give them to pull requests from forks.
+Only people with write access can run the workflow. If you add collaborators later,
+also limit the `production` environment to the `main` branch and protect `main`.
 
 ## 3. Vercel project
 
@@ -130,14 +145,20 @@ Migrations go through the manual **Deploy database migrations** GitHub workflow
    Keep the defaults (build `pnpm build`, Node 22+).
 2. **Environment variables** (*Settings → Environment Variables*). Scope each one:
 
-   | Variable | Production | Preview | Notes |
-   |---|---|---|---|
-   | `NEXT_PUBLIC_SUPABASE_URL` | production project URL | staging project URL | |
-   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | production publishable/anon key | staging key | Public by design; RLS protects data |
-   | `NEXT_PUBLIC_SITE_URL` | `https://your-domain` | staging Site URL | |
-   | `SUPABASE_SERVICE_ROLE_KEY` | production secret key | staging secret key | Mark **Sensitive**. Used only for account deletion |
-   | `SENTRY_DSN` | from step 4 | leave empty | Empty means Sentry is off |
-   | `FEATURE_AI` | `false` | `false` | |
+   Apply each to **Production and Preview** (same values). The three `NEXT_PUBLIC_`
+   variables are meant to reach the browser: add them as a plain **Config**
+   variable, not *Sensitive*/*Secret* (Vercel shows "Remove the public framework
+   prefix…" if you mark them sensitive). The service-role key is the opposite: mark it
+   **Sensitive**, and never give it a `NEXT_PUBLIC_` prefix.
+
+   | Variable | Value | Where to find it |
+   |---|---|---|
+   | `NEXT_PUBLIC_SUPABASE_URL` | `https://<project-ref>.supabase.co` | Supabase → Project Settings → Data API (or API) → Project URL |
+   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | the `anon` or `publishable` key | Supabase → Project Settings → API Keys. Public by design; RLS protects data |
+   | `NEXT_PUBLIC_SITE_URL` | `https://your-domain` (while testing: your `vercel.app` URL) | Vercel → Settings → Domains |
+   | `SUPABASE_SERVICE_ROLE_KEY` | the `service_role` or `secret` key | Supabase → Project Settings → API Keys. Mark **Sensitive**. Used only for account deletion |
+   | `SENTRY_DSN` | from step 4 (Production only) | Empty means Sentry is off |
+   | `FEATURE_AI` | `false` | |
 
    `CRON_SECRET` isn't needed yet (no cron job is scheduled).
 3. **Settings → Functions:** confirm the region shows **London (lhr1)**. It comes
@@ -146,8 +167,9 @@ Migrations go through the manual **Deploy database migrations** GitHub workflow
    deployments, so only your team can open them.
 5. **Settings → Domains:** add your domain and point DNS as instructed. HTTPS is
    automatic. The app already sends HSTS and the other security headers.
-6. **Settings → Git:** production branch `main`. Every pull request gets a preview on
-   the staging database.
+6. **Settings → Git:** production branch `main`. Every pull request gets a preview,
+   using the same database. Previews can change real data, so keep Deployment
+   Protection on.
 
 ## 4. Sentry (error tracking)
 
@@ -182,13 +204,17 @@ On the production domain:
 
 ## Shipping changes after launch
 
-1. Open a pull request. CI runs; Vercel builds a preview on the staging database.
-2. **If it adds a migration:** run the workflow against `staging`, test the preview,
-   then run it against `production` **before merging**. Migrations must work with
+1. Open a pull request. CI runs; Vercel builds a preview (same database).
+2. **If it adds a migration:** run the workflow (dry run, then for real) **before
+   merging**. Migrations must work with
    the currently deployed code (expand → migrate → contract, ARCHITECTURE §15).
 3. Merge to `main`. Vercel deploys production.
 4. Rolling back: Vercel → *Deployments* → promote the previous deployment. Schema
    changes are forward-only; fix them with a new migration.
+
+Later, before real users: a separate staging Supabase project for previews keeps
+test changes away from real data. It needs a `staging` option added back to the
+workflow and separate Preview env vars in Vercel.
 
 Backups: Supabase Pro takes daily backups. Turn on point-in-time recovery before
 the public launch.
