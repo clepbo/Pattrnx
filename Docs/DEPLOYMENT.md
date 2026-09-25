@@ -22,6 +22,50 @@ Why London: Nigeria-first launch, and Supabase has no African region yet (PRD Q1
 The app's server code runs in the same city as the database, because every page
 makes several database calls.
 
+## Testing setup (current): personal Gmail, no custom domain
+
+Until a domain is bought and real beta users are invited, the setup is smaller.
+Where this section differs from the steps below, follow this section.
+
+| Item | Testing setup | Switch before inviting beta users |
+|---|---|---|
+| App URL | Vercel's default `https://<project>.vercel.app` (see *Settings → Domains* for the exact name) | Your own domain |
+| Auth emails | Gmail SMTP from your personal Gmail (below) | An email provider sending from your domain |
+| Supabase | Just `pattrnx-production` on the Free plan; previews use it too | Pro plan, plus a separate staging project for previews |
+| Vercel | Hobby is fine for testing on your own | Pro (Hobby's terms are non-commercial only) |
+| Service accounts | Signed up with your personal Gmail | Invite a business address and make it an owner |
+
+Use the `vercel.app` URL everywhere this guide says `https://your-domain`:
+Supabase's Site URL and redirect URL (`https://<project>.vercel.app/**`), and
+Vercel's `NEXT_PUBLIC_SITE_URL`. Skip *Settings → Domains* in step 3. HTTPS works
+the same.
+
+**Gmail as the email sender** (Supabase *Authentication → Emails → SMTP*):
+
+1. In your Google Account, turn on **2-Step Verification**, then create an **App
+   password** (*Security → App passwords*, name it "Supabase"). Google shows a
+   16-character password once. Never use your normal Gmail password here.
+2. In Supabase, enable custom SMTP with:
+
+   | Field | Value |
+   |---|---|
+   | Host | `smtp.gmail.com` |
+   | Port | `587` |
+   | Username | your full Gmail address |
+   | Password | the 16-character app password (no spaces) |
+   | Sender email | the same Gmail address (Gmail rewrites any other sender) |
+   | Sender name | `Pattrnx` |
+
+3. Under *Authentication → Rate Limits*, the email limit can stay low (e.g. 30/hour).
+   Gmail allows about 500 emails a day, which is plenty for testing.
+
+Things to know: every tester sees your personal address as the sender and can reply
+to it, and some emails may land in spam. If the app password leaks, revoke it in
+your Google Account; your Gmail password is unaffected.
+
+With a single Supabase project, the migration workflow (step 2) needs only the
+`production` GitHub environment; skip `staging`.
+
 ## 1. Supabase projects
 
 Do this twice: `pattrnx-staging` first, then `pattrnx-production`.
@@ -46,7 +90,8 @@ Do this twice: `pattrnx-staging` first, then `pattrnx-production`.
    | Reset password | `recovery.html` | Reset your Pattrnx password |
 
    The links must stay in the `{{ .SiteURL }}/auth/confirm?token_hash=…` form.
-6. **Authentication → Emails → SMTP:** enter your email provider's SMTP details and a
+6. **Authentication → Emails → SMTP:** while testing, use Gmail (see *Testing setup*).
+   For the beta, enter your email provider's SMTP details and a
    sender like `Pattrnx <hello@your-domain>`. Without this, Supabase's shared sender
    is heavily rate-limited and not meant for real users. Verify the sending domain
    (SPF/DKIM) in the provider first.
@@ -122,8 +167,8 @@ tracing, session replay or browser SDK.
 On the production domain:
 
 - [ ] `https://your-domain/api/health` returns `{"status":"ok"}`.
-- [ ] Sign up with a real address. The email comes from your domain, and the link
-      opens `https://your-domain/auth/confirm…` and lands on onboarding.
+- [ ] Sign up with a real address you can read. The email arrives from the configured sender, and the link opens
+      `https://your-domain/auth/confirm…` and lands on onboarding.
 - [ ] Magic link and password reset emails arrive and work.
 - [ ] Create a goal and a routine, and log an activity; Today shows it.
 - [ ] Settings → Data: the export downloads.

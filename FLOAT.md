@@ -15,8 +15,11 @@ The hosted projects don't exist yet. The user creates them by following
 
 ## Next up
 
-1. User: create the Supabase (staging + production), Vercel, Sentry and email-provider
-   accounts per `Docs/DEPLOYMENT.md`, then run its smoke test. Afterwards, update the
+1. User: set up hosting for testing per `Docs/DEPLOYMENT.md` → *Testing setup*: the
+   default `vercel.app` URL, auth emails via personal Gmail SMTP (app password), and
+   a single Supabase project on Free. Then run the smoke test. Before inviting beta
+   users, switch to a domain, a proper email provider, Supabase Pro + staging, and
+   Vercel Pro. Afterwards, update the
    NOT VERIFIED list in `Docs/SECURITY_REVIEW.md`.
 2. Privacy notice and terms (NDPA 2023 + GDPR, including the UK data transfer).
    Needs the operator's legal name and contact details from the user.
