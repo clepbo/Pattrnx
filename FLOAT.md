@@ -32,8 +32,9 @@ The hosted projects don't exist yet. The user creates them by following
 - Q1 resolved: Nigeria-first, hosted in London (Vercel `lhr1`, Supabase `eu-west-2`).
 - Sentry: server errors only, off unless `SENTRY_DSN` is set (so previews and CI
   send nothing). No browser SDK or source-map upload yet (ADR 0001 consequences).
-- Migrations are applied by `deploy-db.yml` before merging code that needs them.
-  Production requires a reviewer's approval.
+- One Supabase project for the whole testing phase (user's choice); previews share
+  it. `deploy-db.yml` targets `production` only and validates the secrets' format.
+  Apply migrations before merging code that needs them.
 - Experiments stay `active` past their end date until the user confirms.
 - Reviews are generated lazily (no cron). `/api/cron/weekly` is still unbuilt, so
   `CRON_SECRET` isn't needed yet.

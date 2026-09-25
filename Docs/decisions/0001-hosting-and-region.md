@@ -18,10 +18,11 @@ distance from the user to the server.
 
 - **Vercel** hosts the app, with serverless functions pinned to **London (`lhr1`)**
   in `vercel.json`. Pro plan, because Hobby is for non-commercial use.
-- **Supabase** production and staging projects in **London (`eu-west-2`)**.
-  Previews use staging. Production is on Supabase Pro (backups, no pausing).
-- **Migrations** are applied by a manual GitHub workflow (`deploy-db.yml`), with a
-  required reviewer on the `production` environment. It never seeds.
+- **Supabase** project in **London (`eu-west-2`)**. During testing there is one
+  project on the Free plan, which previews share. Before real users: Supabase Pro
+  (backups, no pausing), and optionally a staging project for previews.
+- **Migrations** are applied to the `production` project by a manual GitHub
+  workflow (`deploy-db.yml`). It never seeds.
 - **Sentry** (`@sentry/nextjs`) reports **server errors only**, off unless
   `SENTRY_DSN` is set. It's configured to collect no user data, and `beforeSend`
   scrubs events again. Sentry organization in the EU data region.

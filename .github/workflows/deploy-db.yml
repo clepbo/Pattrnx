@@ -1,25 +1,20 @@
 name: Deploy database migrations
 
-# Applies supabase/migrations to a hosted project (ARCHITECTURE.md §15). Manual only.
-# Each target is a GitHub environment holding that project's secrets; give the
-# `production` environment a required reviewer so pushes there need approval.
+# Applies supabase/migrations to the hosted Supabase project (ARCHITECTURE.md §15).
+# Manual only. Secrets live in the `production` GitHub environment; see
+# Docs/DEPLOYMENT.md §2 for where each value comes from.
 # Never seeds: supabase/seed.sql is for local development only.
 
 on:
   workflow_dispatch:
     inputs:
-      target:
-        description: Which hosted project to migrate
-        type: choice
-        options: [staging, production]
-        required: true
       dry_run:
         description: Only list the migrations that would be applied
         type: boolean
         default: true
 
 concurrency:
-  group: deploy-db-${{ inputs.target }}
+  group: deploy-db-production
   cancel-in-progress: false
 
 permissions:
@@ -27,15 +22,35 @@ permissions:
 
 jobs:
   migrate:
-    name: Migrate ${{ inputs.target }}${{ inputs.dry_run && ' (dry run)' || '' }}
+    name: Migrate production${{ inputs.dry_run && ' (dry run)' || '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    environment: ${{ inputs.target }}
+    environment: production
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
       SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
     steps:
+      - name: Check secrets
+        run: |
+          fail=0
+          for name in SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_PROJECT_REF; do
+            if [ -z "${!name}" ]; then
+              echo "::error::$name is not set. Add it under Settings → Environments → production → Environment secrets."
+              fail=1
+            fi
+          done
+          [ "$fail" = 0 ] || exit 1
+          # Wrong values here were the most common setup mistake; say which one and why.
+          if [[ ! "$SUPABASE_ACCESS_TOKEN" =~ ^sbp_[A-Za-z0-9]+$ ]]; then
+            echo "::error::SUPABASE_ACCESS_TOKEN must be a personal access token starting with sbp_ (Supabase → Account → Access Tokens), with no spaces or line breaks. Project API keys (anon, publishable, service_role, secret) don't work here."
+            fail=1
+          fi
+          if [[ ! "$SUPABASE_PROJECT_REF" =~ ^[a-z0-9]+$ ]]; then
+            echo "::error::SUPABASE_PROJECT_REF must be the project ID only (e.g. abcdefghijklmnopqrst), not the URL, with no spaces or line breaks."
+            fail=1
+          fi
+          exit "$fail"
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
@@ -43,11 +58,6 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Check secrets are set
-        run: |
-          for name in SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_PROJECT_REF; do
-            if [ -z "${!name}" ]; then echo "::error::$name is not set for the ${{ inputs.target }} environment"; exit 1; fi
-          done
       - run: pnpm exec supabase link --project-ref "$SUPABASE_PROJECT_REF"
       - name: Push migrations
         run: pnpm exec supabase db push ${{ inputs.dry_run && '--dry-run' || '' }}
