@@ -469,7 +469,7 @@ private.
 
 | # | Question | Default if unanswered |
 |---|---|---|
-| Q1 | Target launch market(s)? This drives hosting region and privacy law (Nigeria NDPA 2023, GDPR if EU users). | Nigeria-first. Supabase region `eu-west-2` (London) until an African region is available. Privacy notice written to NDPA + GDPR. |
+| Q1 | Target launch market(s)? This drives hosting region and privacy law (Nigeria NDPA 2023, GDPR if EU users). | **Resolved 2026-09-25 (ADR 0001):** Nigeria-first. Supabase `eu-west-2` and Vercel `lhr1` (London) until an African region is available. Privacy notice written to NDPA + GDPR. |
 | Q2 | LLM provider and budget for P2 AI features? | Defer. Anthropic Claude behind an adapter, off by default. |
 | Q3 | Pricing/monetization (free beta, subscription)? It affects whether billing belongs in the architecture. | Free closed beta. No billing code. |
 | Q4 | When is a native mobile app needed? The mobile screen runbook suggests Figma mobile designs are planned. | Mobile-first responsive web for MVP. Mobile designs can target the same screens. API boundaries kept clean for a later native client. |

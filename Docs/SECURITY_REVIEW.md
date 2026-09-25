@@ -102,7 +102,7 @@ must be configured when the hosted project is created.
 ### Informational
 
 - **SR-7: no app-level write quotas.** Server actions and direct PostgREST writes aren't rate-limited per user, so a user could inflate their own tables. Supabase platform limits apply. Add per-user write quotas via `hit_rate_limit` if abuse appears.
-- **SR-8: no error monitoring yet** (OWASP A09). Structured logs exist, with no user content. Add Sentry with `beforeSend` scrubbing before public beta (ARCHITECTURE §10).
+- **SR-8 (fixed 2026-09-25): no error monitoring** (OWASP A09). Server errors now go to Sentry when `SENTRY_DSN` is set, with SDK data collection off and a tested `beforeSend` scrubber. Verified against a local capture endpoint: no query strings, cookies, headers or user details were sent. Browser errors aren't reported yet (ADR 0001).
 - **SR-9: CSP allows `style-src 'unsafe-inline'`.** A documented trade-off: React renders SSR `style` attributes. Scripts are nonce-restricted with `strict-dynamic`.
 - **SR-10: export doesn't require a recent sign-in.** Accepted: someone holding a session can already read all the same data in the UI. SR-3 and the rate limit bound automated abuse.
 - **SR-11 (fixed): `shadcn` moved from dependencies to devDependencies.** It's only needed at build time for CSS.
@@ -136,7 +136,7 @@ must be configured when the hosted project is created.
 | A06 Insecure Design | SR-1 fixed. SR-5 open (self-only) |
 | A07 Authentication Failures | No account enumeration, email confirmation, magic links can't create accounts, open-redirect guard (tested). SR-2 fixed |
 | A08 Integrity Failures | CI gates every PR. Migrations forward-only |
-| A09 Logging & Alerting | Structured, content-free logs. No alerting yet (SR-8) |
+| A09 Logging & Alerting | Structured, content-free logs. Scrubbed server-error reporting to Sentry (SR-8, fixed). Alert rules to set up in Sentry |
 | A10 Exceptional Conditions | Error boundaries. Detection failures never block pages. Expected errors are typed `ActionResult`s |
 
 ## ASVS (Level 1 spot checks)
@@ -216,13 +216,14 @@ has an automated test (pgTAP, unit or e2e).
 
 ## Remaining Risks
 
-SR-5, SR-6 (Low); SR-7, SR-8, SR-9, SR-10 (Informational); plus everything in
+SR-5, SR-6 (Low); SR-7, SR-9, SR-10 (Informational); plus everything in
 NOT VERIFIED.
 
 ## NOT VERIFIED
 
 - Hosted Supabase settings: leaked-password protection, session timeouts, custom SMTP, email templates, redirect allow-list, MFA for operator dashboard access.
-- Vercel settings: environment-variable scoping, preview protection.
+- Vercel settings: environment-variable scoping, preview protection, function region.
+- Sentry project settings (server-side scrubbing, IP storage off, EU region).
 - TLS configuration in production.
 - Backups and PITR.
 - Behaviour under real email security scanners (SR-6).
@@ -231,7 +232,7 @@ NOT VERIFIED.
 
 - **P0 (immediate):** none.
 - **P1 (high priority):** none.
-- **P2 (before public beta):** Sentry with scrubbing (SR-8). Apply and verify the production settings checklist (NOT VERIFIED items).
+- **P2 (before public beta):** apply and verify the production settings in `Docs/DEPLOYMENT.md` (NOT VERIFIED items). SR-8 is done.
 - **P3 (hardening):** derived-data writes via validated RPCs (SR-5). POST confirmation for email links if reported (SR-6). Per-user write quotas if abuse appears (SR-7).
 
 ## Security Scorecard
@@ -243,12 +244,14 @@ Input Validation     90   Zod + DB constraints, verified by direct-API probes
 API Security         82   RLS-guarded direct API, rate limit fixed; no general write quotas (SR-7)
 Data Protection      85   Export/delete, no third-party analytics, content-free logs; at-rest encryption is the provider's
 Session Security     80   Secure cookies, rotation; production timeouts not verified
-Infrastructure       75   Strong headers/CSP; hosted configuration not yet codified or verified
+Infrastructure       80   Strong headers/CSP; region and migration workflow codified; hosted settings not verified
 Dependencies         90   Minimal runtime deps, audit gate, Dependabot
 Secrets Management   90   Env-only, server-only key, GitGuardian
-Logging & Monitoring 60   Structured, content-free logs; no alerting yet (SR-8)
-Overall Security     83
+Logging & Monitoring 75   Content-free logs; scrubbed Sentry server errors; no browser errors or alert rules yet
+Overall Security     85
 ```
+
+Updated 2026-09-25 for SR-8 and the hosting setup (ADR 0001); was 83.
 
 Re-run this review at the end of each milestone, and before the production project
 is created.

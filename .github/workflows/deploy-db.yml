@@ -1,0 +1,53 @@
+name: Deploy database migrations
+
+# Applies supabase/migrations to a hosted project (ARCHITECTURE.md §15). Manual only.
+# Each target is a GitHub environment holding that project's secrets; give the
+# `production` environment a required reviewer so pushes there need approval.
+# Never seeds: supabase/seed.sql is for local development only.
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Which hosted project to migrate
+        type: choice
+        options: [staging, production]
+        required: true
+      dry_run:
+        description: Only list the migrations that would be applied
+        type: boolean
+        default: true
+
+concurrency:
+  group: deploy-db-${{ inputs.target }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    name: Migrate ${{ inputs.target }}${{ inputs.dry_run && ' (dry run)' || '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: ${{ inputs.target }}
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Check secrets are set
+        run: |
+          for name in SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_PROJECT_REF; do
+            if [ -z "${!name}" ]; then echo "::error::$name is not set for the ${{ inputs.target }} environment"; exit 1; fi
+          done
+      - run: pnpm exec supabase link --project-ref "$SUPABASE_PROJECT_REF"
+      - name: Push migrations
+        run: pnpm exec supabase db push ${{ inputs.dry_run && '--dry-run' || '' }}
