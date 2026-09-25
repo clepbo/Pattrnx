@@ -288,6 +288,114 @@ export type Database = {
         }
         Relationships: []
       }
+      experiments: {
+        Row: {
+          baseline_end: string
+          baseline_observed_days: number
+          baseline_start: string
+          baseline_value: number | null
+          completed_at: string | null
+          created_at: string
+          direction: Database["public"]["Enums"]["metric_direction"]
+          end_date: string
+          goal_id: string | null
+          hypothesis: string
+          id: string
+          intervention_category: Database["public"]["Enums"]["intervention_category"]
+          intervention_description: string
+          metric: Database["public"]["Enums"]["experiment_metric"]
+          metric_subject: Json
+          outcome: Database["public"]["Enums"]["experiment_outcome"] | null
+          pattern_id: string | null
+          reflection: string | null
+          result_observed_days: number | null
+          result_value: number | null
+          start_date: string
+          status: Database["public"]["Enums"]["experiment_status"]
+          suggested_outcome:
+            | Database["public"]["Enums"]["experiment_outcome"]
+            | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          baseline_end: string
+          baseline_observed_days?: number
+          baseline_start: string
+          baseline_value?: number | null
+          completed_at?: string | null
+          created_at?: string
+          direction: Database["public"]["Enums"]["metric_direction"]
+          end_date: string
+          goal_id?: string | null
+          hypothesis: string
+          id?: string
+          intervention_category: Database["public"]["Enums"]["intervention_category"]
+          intervention_description: string
+          metric: Database["public"]["Enums"]["experiment_metric"]
+          metric_subject?: Json
+          outcome?: Database["public"]["Enums"]["experiment_outcome"] | null
+          pattern_id?: string | null
+          reflection?: string | null
+          result_observed_days?: number | null
+          result_value?: number | null
+          start_date: string
+          status?: Database["public"]["Enums"]["experiment_status"]
+          suggested_outcome?:
+            | Database["public"]["Enums"]["experiment_outcome"]
+            | null
+          title: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          baseline_end?: string
+          baseline_observed_days?: number
+          baseline_start?: string
+          baseline_value?: number | null
+          completed_at?: string | null
+          created_at?: string
+          direction?: Database["public"]["Enums"]["metric_direction"]
+          end_date?: string
+          goal_id?: string | null
+          hypothesis?: string
+          id?: string
+          intervention_category?: Database["public"]["Enums"]["intervention_category"]
+          intervention_description?: string
+          metric?: Database["public"]["Enums"]["experiment_metric"]
+          metric_subject?: Json
+          outcome?: Database["public"]["Enums"]["experiment_outcome"] | null
+          pattern_id?: string | null
+          reflection?: string | null
+          result_observed_days?: number | null
+          result_value?: number | null
+          start_date?: string
+          status?: Database["public"]["Enums"]["experiment_status"]
+          suggested_outcome?:
+            | Database["public"]["Enums"]["experiment_outcome"]
+            | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "experiments_goal_fkey"
+            columns: ["goal_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "experiments_pattern_fkey"
+            columns: ["pattern_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "patterns"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
       goal_strategies: {
         Row: {
           created_at: string
@@ -576,6 +684,7 @@ export type Database = {
           suppressed: boolean
           updated_at: string
           user_id: string
+          vars: Json
           window_end: string
           window_start: string
         }
@@ -601,6 +710,7 @@ export type Database = {
           suppressed?: boolean
           updated_at?: string
           user_id?: string
+          vars?: Json
           window_end: string
           window_start: string
         }
@@ -626,6 +736,7 @@ export type Database = {
           suppressed?: boolean
           updated_at?: string
           user_id?: string
+          vars?: Json
           window_end?: string
           window_start?: string
         }
@@ -670,6 +781,75 @@ export type Database = {
           timezone?: string
           updated_at?: string
           week_starts_on?: number
+        }
+        Relationships: []
+      }
+      rate_limits: {
+        Row: {
+          action: string
+          count: number
+          user_id: string
+          window_start: string
+        }
+        Insert: {
+          action: string
+          count?: number
+          user_id?: string
+          window_start: string
+        }
+        Update: {
+          action?: string
+          count?: number
+          user_id?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
+      reviews: {
+        Row: {
+          content: Json
+          created_at: string
+          engine_version: number
+          generated_at: string
+          id: string
+          period: string
+          period_end: string
+          period_start: string
+          reflection: string | null
+          updated_at: string
+          usefulness: number | null
+          user_id: string
+          viewed_at: string | null
+        }
+        Insert: {
+          content: Json
+          created_at?: string
+          engine_version: number
+          generated_at?: string
+          id?: string
+          period?: string
+          period_end: string
+          period_start: string
+          reflection?: string | null
+          updated_at?: string
+          usefulness?: number | null
+          user_id?: string
+          viewed_at?: string | null
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          engine_version?: number
+          generated_at?: string
+          id?: string
+          period?: string
+          period_end?: string
+          period_start?: string
+          reflection?: string | null
+          updated_at?: string
+          usefulness?: number | null
+          user_id?: string
+          viewed_at?: string | null
         }
         Relationships: []
       }
@@ -880,6 +1060,7 @@ export type Database = {
         Args: { p_max_age?: string }
         Returns: boolean
       }
+      hit_rate_limit: { Args: { p_action: string }; Returns: boolean }
       is_valid_timezone: { Args: { tz: string }; Returns: boolean }
       set_task_status: {
         Args: {
@@ -916,8 +1097,27 @@ export type Database = {
       action_status: "open" | "done" | "dropped"
       activity_polarity: "desired" | "undesired" | "neutral"
       activity_source: "manual" | "task" | "import"
+      experiment_metric:
+        | "task_completion_rate"
+        | "active_days"
+        | "activity_minutes"
+        | "activity_quantity"
+      experiment_outcome: "improved" | "no_change" | "worsened" | "inconclusive"
+      experiment_status: "active" | "completed" | "abandoned"
       goal_status: "draft" | "active" | "paused" | "completed" | "abandoned"
+      intervention_category:
+        | "reduce"
+        | "reschedule"
+        | "sequence"
+        | "replace"
+        | "remove_friction"
+        | "add_friction"
+        | "environment"
+        | "accountability"
+        | "strategy_change"
+        | "goal_recalibration"
       measurement_type: "cumulative" | "level" | "milestone"
+      metric_direction: "increase" | "decrease"
       milestone_status: "pending" | "in_progress" | "done" | "dropped"
       outcome_valence: "positive" | "negative" | "neutral" | "unknown"
       pace_period: "day" | "week" | "month"
@@ -1072,8 +1272,29 @@ export const Constants = {
       action_status: ["open", "done", "dropped"],
       activity_polarity: ["desired", "undesired", "neutral"],
       activity_source: ["manual", "task", "import"],
+      experiment_metric: [
+        "task_completion_rate",
+        "active_days",
+        "activity_minutes",
+        "activity_quantity",
+      ],
+      experiment_outcome: ["improved", "no_change", "worsened", "inconclusive"],
+      experiment_status: ["active", "completed", "abandoned"],
       goal_status: ["draft", "active", "paused", "completed", "abandoned"],
+      intervention_category: [
+        "reduce",
+        "reschedule",
+        "sequence",
+        "replace",
+        "remove_friction",
+        "add_friction",
+        "environment",
+        "accountability",
+        "strategy_change",
+        "goal_recalibration",
+      ],
       measurement_type: ["cumulative", "level", "milestone"],
+      metric_direction: ["increase", "decrease"],
       milestone_status: ["pending", "in_progress", "done", "dropped"],
       outcome_valence: ["positive", "negative", "neutral", "unknown"],
       pace_period: ["day", "week", "month"],

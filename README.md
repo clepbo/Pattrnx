@@ -9,9 +9,11 @@ change them.
 
 ## Status
 
-**Milestone 3 (Understand) in review.** Goal health, the plan-vs-reality strip,
-statistically calibrated pattern and loop detection with inspectable evidence and
-feedback. See `FLOAT.md` for what's next.
+**Milestone 4 (Intervene and learn) in review.** With it, the MVP scope is
+built: goals with feasibility checks, routines, daily logging, goal health,
+calibrated pattern detection, experiments, weekly reviews, and data export and
+deletion. Next is beta readiness (`FLOAT.md`). Security review:
+`Docs/SECURITY_REVIEW.md`.
 
 ## Local development
 
@@ -41,6 +43,7 @@ Checks: `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm db:test`,
 | [`AGENTS.md`](AGENTS.md) | Canonical rules for AI coding agents (imported by `CLAUDE.md`) |
 | [`FLOAT.md`](FLOAT.md) | Current working state and next steps |
 | [`Docs/KICKOFF_REVIEW.md`](Docs/KICKOFF_REVIEW.md) | Stress test: risks, edge cases, simplifications, readiness checklist |
+| [`Docs/SECURITY_REVIEW.md`](Docs/SECURITY_REVIEW.md) | Security review: findings, controls, scorecard, what's not verified |
 | [`Docs/architecture.md`](Docs/architecture.md) | Original product blueprint |
 
 ## Stack

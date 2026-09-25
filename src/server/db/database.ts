@@ -1,4 +1,6 @@
-import type { Database as GeneratedDatabase } from "./database.types";
+import type { Database as GeneratedDatabase, Json } from "./database.types";
+
+export type { Json };
 
 /**
  * The generated types plus corrections the generator can't infer.

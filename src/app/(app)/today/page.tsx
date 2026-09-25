@@ -4,6 +4,7 @@ import Link from "next/link";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { CheckinForm } from "@/features/activities/components/checkin-form";
+import { ExperimentSummary } from "@/features/experiments/components/experiment-summary";
 import { QuickLog } from "@/features/activities/components/quick-log";
 import { HEALTH_LABELS } from "@/features/goals/health-copy";
 import { PatternCard } from "@/features/patterns/components/pattern-card";
@@ -14,6 +15,8 @@ import { formatLocalDate } from "@/lib/format";
 import { requireUser } from "@/server/auth";
 import { isMoneyType, listActivityTypes, quickLogMinutes } from "@/server/services/activity-types";
 import { getCheckin } from "@/server/services/checkins";
+import { listExperiments } from "@/server/services/experiments";
+import { unseenLatestReview } from "@/server/services/reviews";
 import { listGoals } from "@/server/services/goals";
 import { getProfile } from "@/server/services/profile";
 import { getPatternsView, markPresented } from "@/server/services/patterns";
@@ -53,7 +56,12 @@ export default async function TodayPage() {
   const user = await requireUser();
   const profile = await getProfile(user);
   const [plan, types, goals] = await Promise.all([getDayPlan(user), listActivityTypes(user), listGoals(user, { statuses: ["active"] })]);
-  const [checkin, patterns] = await Promise.all([getCheckin(user, plan.today), getPatternsView(user, { limit: 1 })]);
+  const [checkin, patterns, experiments] = await Promise.all([
+    getCheckin(user, plan.today),
+    getPatternsView(user, { limit: 1 }),
+    listExperiments(user),
+  ]);
+  const reviewReady = await unseenLatestReview(user);
   // PRD F10: at most one pattern on Today.
   const watch = patterns.status === "ready" ? patterns.visible[0] : undefined;
   if (watch) await markPresented(user, [watch.id]);
@@ -74,6 +82,13 @@ export default async function TodayPage() {
           </p>
         )}
       </div>
+
+      {reviewReady && (
+        <Link href={`/reviews/${reviewReady}`} className="border-primary/40 bg-muted grid gap-1 rounded-xl border p-4">
+          <span className="font-medium">Your review of last week is ready</span>
+          <span className="text-muted-foreground text-sm">What got done, what repeated, and one thing to try next.</span>
+        </Link>
+      )}
 
       <section aria-labelledby="focus-heading" className="grid gap-4">
         <h2 id="focus-heading" className="text-lg font-medium">
@@ -110,6 +125,17 @@ export default async function TodayPage() {
         )}
         <AddTaskForm today={plan.today} goals={goals.map(({ goal }) => ({ id: goal.id, title: goal.title }))} />
       </section>
+
+      {experiments.active.length > 0 && (
+        <section aria-labelledby="experiments-heading" className="grid gap-3">
+          <h2 id="experiments-heading" className="text-lg font-medium">
+            Experiments
+          </h2>
+          {experiments.active.map((view) => (
+            <ExperimentSummary key={view.experiment.id} view={view} />
+          ))}
+        </section>
+      )}
 
       {watch && (
         <section aria-labelledby="watch-heading" className="grid gap-3">

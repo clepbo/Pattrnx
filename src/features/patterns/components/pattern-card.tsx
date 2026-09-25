@@ -1,5 +1,8 @@
+import Link from "next/link";
+
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
+import { hasIntervention } from "@/server/engines/interventions/catalog";
 import type { PatternRow } from "@/server/services/patterns";
 
 import { givePatternFeedback } from "../actions";
@@ -23,6 +26,11 @@ export function PatternCard({ pattern }: { pattern: PatternRow }) {
       </div>
       <p>{pattern.summary}</p>
       <PatternEvidence pattern={pattern} />
+      {hasIntervention(pattern.detector_key) && (
+        <Button asChild variant="outline" className="justify-self-start">
+          <Link href={`/experiments/new?patternId=${pattern.id}`}>Try an experiment</Link>
+        </Button>
+      )}
       {pattern.feedback && FEEDBACK_LABELS[pattern.feedback] ? (
         <p className="text-muted-foreground text-xs">{FEEDBACK_LABELS[pattern.feedback]}</p>
       ) : (

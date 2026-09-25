@@ -426,16 +426,29 @@ Loops are patterns with `kind='loop'`. Their evidence holds the cycles.
 | status | experiment_status not null default 'active' | |
 | reflection | text | |
 
-BR-7 is enforced by partial unique index `(goal_id) where status='active'` and by a
-count check in the service. The per-user limit is enforced in the service inside a
-transaction via a SQL function.
+BR-7 is enforced in the database: a partial unique index `(goal_id) where
+status='active'`, and a trigger (`experiments_enforce_active_limit`) for at most two
+active per user. Duration (7–42 days) and "the baseline is the equal-length window
+right before the start" are check constraints. An experiment stays `active` past its
+end date until the user confirms the outcome. The result is stored at confirmation.
 
 #### reviews (derived snapshot)
 
 `period text not null default 'week'`, `period_start date`, `period_end date`,
 `content jsonb not null` (versioned snapshot), `engine_version int`,
-`generated_at`, `reflection text`, `usefulness smallint` (1–5, F13 metric).
-Unique `(user_id, period, period_start)`.
+`generated_at`, `viewed_at` (drives the "review ready" banner on Today),
+`reflection text`, `usefulness smallint` (1–5, F13 metric). Unique `(user_id,
+period, period_start)`. Content is capped at 64 KB (SR-4).
+
+#### rate_limits
+
+Fixed-window counters `(user_id, action, window_start, count)`. Written only by
+`hit_rate_limit(p_action)`, which is `security definer` and defines each action's
+limit itself (export: 5/hour). Callers can't pass a window or maximum (SR-1).
+
+`patterns.vars` (M4) stores each pattern's template values, so interventions can
+be built from stored rows. Client-writable JSON columns all carry
+`pg_column_size` caps (SR-4).
 
 ### 4.4 Data ownership and lifecycle
 
@@ -696,8 +709,10 @@ description template, metric, subject, direction and default duration. Examples:
 | `sequence.activity_follows` | *Add friction / Replace*: plan an alternative after {A} for 14 days. Metric: activity_quantity of {B} ↓ |
 | `loop.plan_abandon_replan` | *Goal recalibration*: keep the existing goal, halve its pace for 28 days, no new goals in {area} |
 
-No database table is needed for interventions in the MVP. Accepted suggestions
-become experiments.
+Implemented in `engines/interventions/catalog.ts` (one draft per detector, every
+draft passes `wordingGuard`). No database table is needed. A suggestion pre-fills
+`/experiments/new?patternId=…`, and the weekly review offers the top pattern's
+suggestion.
 
 ### 8.6 Staleness and recomputation
 
@@ -719,6 +734,8 @@ become experiments.
 - `task_completion_rate`: done ÷ planned in range. `active_days`: days with ≥ 1
   activity of type. `activity_minutes` / `activity_quantity`: sum ÷ days in range
   (per-day rate, so windows compare fairly).
+- An *observed day* is a day with any task or activity (evidence the user was
+  tracking). Tasks from today that are still planned aren't counted as missed.
 - Suggested outcome: inconclusive if either window has < 5 observed days (BR-8).
   Otherwise relative change in the desired direction ≥ 15% → improved, ≤ −15% →
   worsened, else no_change. The copy stays cautious ("during the experiment,
@@ -763,7 +780,7 @@ milestone.
 | XSS | React escaping. No `dangerouslySetInnerHTML`. User text rendered as text. Strict CSP |
 | CSRF | Server Actions Origin check (built in). Route handlers that mutate require the session + same-origin check |
 | Password hashing | Supabase Auth (bcrypt). Leaked-password protection enabled |
-| Rate limiting | Supabase Auth built-in limits on sign-in/sign-up/OTP. Export limited to 5/hour/user via a small Postgres counter. AI quota (P2) |
+| Rate limiting | Supabase Auth built-in limits on sign-in/sign-up/OTP. Export limited to 5/hour/user by `hit_rate_limit('export')`, with limits defined in SQL. AI quota (P2) |
 | Session | §6 policy. Secure, httpOnly, SameSite=Lax cookies |
 | Secrets | Env vars only (Vercel/Supabase dashboards). `.env*` gitignored. Service role key server-only, import-restricted |
 | Security headers | Per-request nonce CSP set in `src/proxy.ts` (`script-src 'nonce-…' 'strict-dynamic'`, connect-src self + Supabase origin). This makes every page dynamically rendered, which is acceptable for an authenticated app. `next.config` headers: HSTS, X-Content-Type-Options, Referrer-Policy strict-origin-when-cross-origin, Permissions-Policy, frame-ancestors 'none' |
@@ -771,7 +788,9 @@ milestone.
 | Transport | HTTPS only (Vercel), HSTS. Supabase connections over TLS |
 | Data protection | Encryption at rest (Supabase managed). No behavioral content in logs, errors or analytics. Sentry `beforeSend` scrubs request bodies |
 | Dependencies | Renovate/Dependabot weekly, `pnpm audit` in CI (high+ fails), lockfile committed |
-| Account deletion | Service-role delete of auth user → cascades. Verified by integration test |
+| Account deletion | Typed confirmation plus a sign-in within 15 minutes (SR-2), then service-role delete of the auth user → cascades. Verified by integration and e2e tests |
+| Export | `/api/export`: same-origin only (`Sec-Fetch-Site`, SR-3), rate-limited, read through the user's RLS session. `services/export-tables.ts` is tested against the schema so new tables can't be left out |
+| Security review | `Docs/SECURITY_REVIEW.md` (M4): findings, controls matrix, scorecard, NOT VERIFIED list. Re-run each milestone |
 | Logging | Structured logs with request id, user id (uuid only), action name, outcome, latency. Never notes, titles, amounts or moods |
 
 ## 11. Error Handling
