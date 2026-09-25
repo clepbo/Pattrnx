@@ -145,7 +145,11 @@ also limit the `production` environment to the `main` branch and protect `main`.
    Keep the defaults (build `pnpm build`, Node 22+).
 2. **Environment variables** (*Settings → Environment Variables*). Scope each one:
 
-   Apply each to **Production and Preview** (same values):
+   Apply each to **Production and Preview** (same values). The three `NEXT_PUBLIC_`
+   variables are meant to reach the browser: add them as a plain **Config**
+   variable, not *Sensitive*/*Secret* (Vercel shows "Remove the public framework
+   prefix…" if you mark them sensitive). The service-role key is the opposite: mark it
+   **Sensitive**, and never give it a `NEXT_PUBLIC_` prefix.
 
    | Variable | Value | Where to find it |
    |---|---|---|
