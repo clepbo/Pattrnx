@@ -28,8 +28,8 @@ every intentional deviation from the blueprint.
 | Charts | Hand-written SVG components (bars, weekday heatmap, plan-vs-reality strip) | The MVP needs 3 simple charts. Revisit a library when the P2 visualizations arrive. |
 | Background work | None required for correctness. Optional Vercel Cron → protected route handler | See §7. Lazy, on-demand computation avoids queue infrastructure. |
 | AI (P2) | Provider adapter in `src/server/ai`. Default: Anthropic Claude via official SDK, model id from env | Off by default. The MVP doesn't depend on it. |
-| Hosting | Vercel (app) + Supabase Cloud (DB/Auth) | Managed, low-ops, with preview deployments per PR. |
-| Monitoring | Vercel logs + structured JSON logging. Sentry (errors only, PII scrubbing) before public beta | Enough for the beta. No behavioral content in logs. |
+| Hosting | Vercel (app, functions in London `lhr1`) + Supabase Cloud (DB/Auth, London `eu-west-2`) | Managed, low-ops, with preview deployments per PR. Region per Q1 (ADR 0001). |
+| Monitoring | Vercel logs + structured JSON logging. Sentry, server errors only, scrubbed (`src/instrumentation.ts`, ADR 0001) | Enough for the beta. No behavioral content in logs. |
 | Testing | Vitest (unit/integration), Playwright (e2e), Supabase local stack for RLS/integration | See §12. |
 | CI/CD | GitHub Actions: typecheck, lint, unit, integration (local Supabase), e2e smoke. Vercel deploys | See §15. |
 | Package manager | pnpm | Fast, strict dependency resolution. |
@@ -786,7 +786,7 @@ milestone.
 | Security headers | Per-request nonce CSP set in `src/proxy.ts` (`script-src 'nonce-…' 'strict-dynamic'`, connect-src self + Supabase origin). This makes every page dynamically rendered, which is acceptable for an authenticated app. `next.config` headers: HSTS, X-Content-Type-Options, Referrer-Policy strict-origin-when-cross-origin, Permissions-Policy, frame-ancestors 'none' |
 | CORS | No cross-origin API in MVP. Route handlers don't set permissive CORS |
 | Transport | HTTPS only (Vercel), HSTS. Supabase connections over TLS |
-| Data protection | Encryption at rest (Supabase managed). No behavioral content in logs, errors or analytics. Sentry `beforeSend` scrubs request bodies |
+| Data protection | Encryption at rest (Supabase managed). No behavioral content in logs, errors or analytics. Sentry collects no user data (`dataCollection` off) and `beforeSend` (`server/observability/scrub.ts`) strips request data, query strings, breadcrumb payloads and stack locals |
 | Dependencies | Renovate/Dependabot weekly, `pnpm audit` in CI (high+ fails), lockfile committed |
 | Account deletion | Typed confirmation plus a sign-in within 15 minutes (SR-2), then service-role delete of the auth user → cascades. Verified by integration and e2e tests |
 | Export | `/api/export`: same-origin only (`Sec-Fetch-Site`, SR-3), rate-limited, read through the user's RLS session. `services/export-tables.ts` is tested against the schema so new tables can't be left out |
@@ -856,15 +856,20 @@ truth" requirement is tested.
 | local | `pnpm dev` | `supabase start` (Docker) | Development, integration tests |
 | preview | Vercel preview per PR | Supabase branch or shared staging project | Review |
 | staging | Vercel `staging` branch | Supabase staging project | Pre-release, e2e nightly |
-| production | Vercel `main` | Supabase production project (region per Q1) | Users |
+| production | Vercel `main` | Supabase production project, London | Users |
+
+Regions (ADR 0001): Supabase `eu-west-2` (London), Vercel functions `lhr1` via
+`vercel.json`. Setup steps and the smoke test are in `Docs/DEPLOYMENT.md`. Until a
+staging branch is needed, previews use the staging project.
 
 CI (`.github/workflows/ci.yml`) on every PR, in two parallel jobs:
 (1) typecheck → lint → unit tests (under `TZ=America/Los_Angeles`, to catch
 server-timezone bugs) → `pnpm audit`; (2) start local Supabase (migrations + seed)
 → `db lint` → pgTAP → generated-types drift check → integration → build →
 Playwright.
-Migrations are applied to staging, then production, with `supabase db push`, gated
-on manual approval for production. Migrations are forward-only. Destructive
+Migrations are applied to staging, then production, with `supabase db push` via the
+manual `deploy-db.yml` workflow (GitHub environments; production needs a reviewer's
+approval; never seeds). Apply them before merging the code that needs them. Migrations are forward-only. Destructive
 changes follow expand → migrate → contract.
 
 Backups: Supabase daily backups, plus PITR before public launch.
@@ -878,7 +883,7 @@ Backups: Supabase daily backups, plus PITR before public launch.
 | `SUPABASE_SERVICE_ROLE_KEY` | server only | Cron + account deletion only |
 | `NEXT_PUBLIC_SITE_URL` | public | Auth redirect URLs, CSP |
 | `CRON_SECRET` | server only | Protects `/api/cron/*` |
-| `SENTRY_DSN` | server (optional) | Error reporting |
+| `SENTRY_DSN` | server (optional) | Server error reporting. Empty = off (local, CI, previews) |
 | `FEATURE_AI` | server | `false` in MVP |
 | `AI_PROVIDER_API_KEY`, `AI_MODEL` | server (P2) | LLM access |
 | `MAILPIT_URL` | tests only | Local email inbox for e2e |

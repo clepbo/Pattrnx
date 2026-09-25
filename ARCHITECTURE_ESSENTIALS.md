@@ -14,7 +14,9 @@ Experiment → Adapt.**
 
 TypeScript (strict) · Next.js App Router (RSC + Server Actions) · Tailwind +
 shadcn/ui · Supabase (Postgres + Auth + RLS) via `@supabase/ssr` / `supabase-js` ·
-Zod · date-fns + @date-fns/tz · Vitest · Playwright · pgTAP · pnpm · Vercel.
+Zod · date-fns + @date-fns/tz · Vitest · Playwright · pgTAP · pnpm · Vercel ·
+Sentry (server errors only, scrubbed). Hosted in London: Vercel `lhr1`, Supabase
+`eu-west-2` (ADR 0001, `Docs/DEPLOYMENT.md`).
 **No** ORM, queue, Redis, analytics store, state library or chart library in the MVP.
 
 ## Shape

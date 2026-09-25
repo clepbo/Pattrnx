@@ -9,10 +9,11 @@ change them.
 
 ## Status
 
-**Milestone 4 (Intervene and learn) in review.** With it, the MVP scope is
+**MVP built (Milestones 1–4 merged); preparing the beta.** The MVP scope is
 built: goals with feasibility checks, routines, daily logging, goal health,
 calibrated pattern detection, experiments, weekly reviews, and data export and
-deletion. Next is beta readiness (`FLOAT.md`). Security review:
+deletion. Next is beta readiness (`FLOAT.md`); hosting setup is in
+`Docs/DEPLOYMENT.md`. Security review:
 `Docs/SECURITY_REVIEW.md`.
 
 ## Local development
@@ -44,6 +45,7 @@ Checks: `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm db:test`,
 | [`FLOAT.md`](FLOAT.md) | Current working state and next steps |
 | [`Docs/KICKOFF_REVIEW.md`](Docs/KICKOFF_REVIEW.md) | Stress test: risks, edge cases, simplifications, readiness checklist |
 | [`Docs/SECURITY_REVIEW.md`](Docs/SECURITY_REVIEW.md) | Security review: findings, controls, scorecard, what's not verified |
+| [`Docs/DEPLOYMENT.md`](Docs/DEPLOYMENT.md) | Hosting setup (Vercel + Supabase, London), shipping changes, smoke test |
 | [`Docs/architecture.md`](Docs/architecture.md) | Original product blueprint |
 
 ## Stack
