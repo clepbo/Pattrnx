@@ -130,7 +130,9 @@ which value is wrong.
    environment, not in *Secrets and variables → Actions*.
 3. **Actions** → **Deploy database migrations** → **Run workflow** (branch `main`),
    with *dry run* ticked. The log lists the migrations it would apply.
-4. Run it again with *dry run* unticked.
+4. Run it again with *dry run* **unticked**. This is the run that changes the database.
+   A dry run always finishes green and applies nothing; its summary says so. To
+   check, run a dry run again afterwards: it should list no migrations.
 5. Check: in Supabase's **Table Editor**, the tables exist and each shows **RLS
    enabled**.
 
