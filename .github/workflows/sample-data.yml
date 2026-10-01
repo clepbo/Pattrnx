@@ -1,0 +1,48 @@
+name: Load sample data
+
+# Testing only: writes ~9 weeks of sample history into ONE empty account on the hosted
+# project (scripts/sample-data.mts). Refuses accounts that already have goals or
+# routines, and undoes its own writes if anything fails. Logs ids and counts only.
+# Needs SUPABASE_SERVICE_ROLE_KEY in the `production` environment (Docs/DEPLOYMENT.md).
+
+on:
+  workflow_dispatch:
+    inputs:
+      user_id:
+        description: "Account id (Supabase → Authentication → Users). Leave empty when the project has one user."
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  load:
+    name: Load sample data
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    env:
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SAMPLE_USER_ID: ${{ inputs.user_id }}
+    steps:
+      - name: Check secrets
+        run: |
+          if [ -z "$SUPABASE_PROJECT_REF" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "::error::Add SUPABASE_SERVICE_ROLE_KEY (Supabase → Project Settings → API Keys → service_role) to the production environment. SUPABASE_PROJECT_REF must be set too."
+            exit 1
+          fi
+          if [[ -n "$SAMPLE_USER_ID" && ! "$SAMPLE_USER_ID" =~ ^[0-9a-f-]{36}$ ]]; then
+            echo "::error::user_id must be the account's id (a UUID), not an email address."
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Load sample data
+        run: SUPABASE_URL="https://${SUPABASE_PROJECT_REF}.supabase.co" node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/sample-data.mts
