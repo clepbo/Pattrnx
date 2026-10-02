@@ -50,7 +50,7 @@
     "shadcn": "^4.21.0",
     "supabase": "^2.117.0",
     "tailwindcss": "^4",
-    "typescript": "^5",
+    "typescript": "^6",
     "vitest": "^5.0.1"
   },
   "packageManager": "pnpm@10.33.0",
