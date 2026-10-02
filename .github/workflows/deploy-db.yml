@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       dry_run:
-        description: Only list the migrations that would be applied
+        description: "Preview only: list the migrations but apply nothing (untick to apply)"
         type: boolean
         default: true
 
@@ -61,3 +61,13 @@ jobs:
       - run: pnpm exec supabase link --project-ref "$SUPABASE_PROJECT_REF"
       - name: Push migrations
         run: pnpm exec supabase db push ${{ inputs.dry_run && '--dry-run' || '' }}
+      # A green dry run looks like success; say plainly that nothing changed.
+      - name: Report
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            echo "::warning::Preview only: NO migrations were applied. Run the workflow again with the preview box unticked to apply them."
+            echo "### Preview only: nothing was applied" >> "$GITHUB_STEP_SUMMARY"
+            echo "Run the workflow again with the preview box **unticked** to apply the migrations listed in the log." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### Migrations applied to production" >> "$GITHUB_STEP_SUMMARY"
+          fi

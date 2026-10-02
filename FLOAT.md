@@ -47,6 +47,12 @@ None blocking code. The beta waits on the user creating the hosted accounts.
 
 ## Known gaps / notes for the next agent
 
+- Sample data (`scripts/sample-data.mts`, workflow *Load sample data*) surfaced a real
+  detector issue: `timing.hour_band` counts routine-completion activities, which are
+  logged at the routine's scheduled time, so a 06:30 workout yields "100% in the
+  morning". Proposed fix (needs the user's OK): measure only manual logs, with a
+  version bump, a fixture and a `test:robustness` run.
+
 - Email security scanners that pre-fetch links can consume one-time tokens. If
   users report "link didn't work", switch `/auth/confirm` to a confirm-button
   page (a POST) instead of verifying on GET.

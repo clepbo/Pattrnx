@@ -130,7 +130,9 @@ which value is wrong.
    environment, not in *Secrets and variables → Actions*.
 3. **Actions** → **Deploy database migrations** → **Run workflow** (branch `main`),
    with *dry run* ticked. The log lists the migrations it would apply.
-4. Run it again with *dry run* unticked.
+4. Run it again with *dry run* **unticked**. This is the run that changes the database.
+   A dry run always finishes green and applies nothing; its summary says so. To
+   check, run a dry run again afterwards: it should list no migrations.
 5. Check: in Supabase's **Table Editor**, the tables exist and each shows **RLS
    enabled**.
 
@@ -183,6 +185,28 @@ server errors only, with the exception, stack, request method and path (never th
 query string), release and environment. It never sends cookies, headers, request
 bodies, local variables, IP addresses, emails or anything a user typed. No
 tracing, session replay or browser SDK.
+
+## Load sample data (testing only)
+
+Patterns need 21 days of history. To try patterns, weekly reviews, goal health and
+experiments straight away, the **Load sample data** workflow
+(`.github/workflows/sample-data.yml`, script `scripts/sample-data.mts`) writes about
+9 weeks of history into one account. That covers 3 goals, 2 routines with their past
+tasks, activities, savings deposits and check-ins, with three planted patterns:
+Wednesday drop-off, a breaking point after 3 workouts, and spending after difficult
+meetings.
+
+1. Sign up and confirm the account. Don't create goals or routines: the script only
+   loads into an empty account.
+2. Add `SUPABASE_SERVICE_ROLE_KEY` (Supabase → Project Settings → API Keys →
+   `service_role`) to the `production` GitHub environment.
+3. **Actions → Load sample data → Run workflow.** Leave *user_id* empty if the
+   project has one account. Otherwise paste its id from Supabase → Authentication →
+   Users (the id, never the email: workflow inputs are public on a public repo).
+4. Open `/today`, `/patterns` and `/reviews`.
+
+If a write fails, the script removes what it wrote. To start over later, delete the
+account in Settings → Data and sign up again.
 
 ## 5. First-deploy smoke test
 
